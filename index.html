@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CycleBubble 周期泡泡产品设计</title>
+    <meta
+      name="description"
+      content="CycleBubble product prototype centered on the cycle bubble concept."
+    >
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="product-board" aria-label="CycleBubble redesigned product board">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="kicker">CycleBubble · 周期泡泡</p>
+          <h1>今天的情绪，先看泡泡怎么说</h1>
+          <p class="lead">
+            周期泡泡不是装饰图形，而是产品的核心界面：它把周期阶段、情绪强度、身体线索和匿名共鸣合在一个可以被感知的状态容器里。
+          </p>
+          <div class="positioning">
+            <span>不是经期日历</span>
+            <span>不是医疗诊断</span>
+            <span>不是社交广场</span>
+          </div>
+        </div>
+
+        <article class="phone home-phone" aria-label="Home screen with cycle bubble">
+          <div class="status">
+            <span>09:41</span>
+            <span>CycleBubble</span>
+          </div>
+
+          <header class="screen-head">
+            <div>
+              <p class="micro">6 月 19 日 · 第 21 天</p>
+              <h2>你的周期泡泡</h2>
+            </div>
+            <button class="icon-button" type="button" aria-label="查看隐私设置">
+              <span></span>
+            </button>
+          </header>
+
+          <section class="cycle-bubble-wrap" aria-label="Current cycle bubble">
+            <div class="cycle-bubble" data-phase="黄体期倾向">
+              <div class="bubble-glass"></div>
+              <div class="liquid-body">
+                <div class="liquid-surface surface-one"></div>
+                <div class="liquid-surface surface-two"></div>
+              </div>
+              <div class="bubble-flow flow-one"></div>
+              <div class="bubble-flow flow-two"></div>
+              <div class="bubble-content">
+                <strong>68%</strong>
+                <span>黄体期倾向</span>
+              </div>
+            </div>
+            <div class="phase-dots" aria-label="Cycle phases">
+              <span>卵泡</span>
+              <span>排卵</span>
+              <span class="active">黄体</span>
+            </div>
+          </section>
+
+          <section class="bubble-reading">
+            <p class="label">泡泡解读</p>
+            <h3>今天的泡泡比较满</h3>
+            <p>这不是对你的判断。身体节律可能让一些感受更靠近表面，今天适合把安排留得松一点。</p>
+          </section>
+
+          <section class="quick-signals" aria-label="Today signals">
+            <div>
+              <span>液面</span>
+              <strong>较满</strong>
+            </div>
+            <div>
+              <span>流速</span>
+              <strong>慢</strong>
+            </div>
+            <div>
+              <span>共鸣</span>
+              <strong>4 条</strong>
+            </div>
+          </section>
+
+          <button class="primary-action" type="button">记录这一刻</button>
+        </article>
+      </section>
+
+      <section class="design-statement" aria-label="Design direction">
+        <div>
+          <p class="kicker">Redesigned idea</p>
+          <h2>把“泡泡”升级成产品语言，而不是换成普通健康图表</h2>
+        </div>
+        <p>
+          新版的泡泡承担四件事：时期看颜色，状态容量看液体体积，变化速度看流速，身体线索看漂浮颗粒。首页不直接贴“焦虑、易怒”这类标签，用户第一眼看到的是自己的泡泡，而不是一组会刺痛人的判断。
+        </p>
+      </section>
+
+      <section class="screen-grid" aria-label="Core screens">
+        <article class="phone compact" aria-label="Cycle bubble detail screen">
+          <div class="status">
+            <span>09:41</span>
+            <span>泡泡详情</span>
+          </div>
+          <header class="screen-head">
+            <div>
+              <p class="micro">周期阶段</p>
+              <h2>泡泡里有什么</h2>
+            </div>
+          </header>
+          <div class="mini-bubble high">
+            <span></span>
+            <strong>黄体期</strong>
+          </div>
+          <div class="legend-list">
+            <div>
+              <i class="ink"></i>
+              <span>液体体积</span>
+              <b>今天比较满</b>
+            </div>
+            <div>
+              <i class="rose"></i>
+              <span>颜色变化</span>
+              <b>黄体期倾向 68%</b>
+            </div>
+            <div>
+              <i class="gold"></i>
+              <span>漂浮颗粒</span>
+              <b>睡眠少、事情多、身体发沉</b>
+            </div>
+          </div>
+          <section class="card">
+            <p class="label">温和提示</p>
+            <h3>今天适合少一点临时变化</h3>
+            <p>类似阶段里，你更常需要安静时间和更慢的恢复节奏。</p>
+          </section>
+        </article>
+
+        <article class="phone compact" aria-label="Emotion note screen">
+          <div class="status">
+            <span>09:41</span>
+            <span>情绪记录</span>
+          </div>
+          <header class="screen-head">
+            <div>
+              <p class="micro">写进今天的泡泡</p>
+              <h2>这一刻先放下来</h2>
+            </div>
+          </header>
+          <div class="bubble-dials" aria-label="Gentle state controls">
+            <label>
+              <span>液面</span>
+              <input type="range" min="1" max="5" value="4">
+            </label>
+            <label>
+              <span>流速</span>
+              <input type="range" min="1" max="5" value="2">
+            </label>
+          </div>
+          <label class="note-field">
+            <span>自由记录</span>
+            <textarea>今天有件事在心里停留得久了一点。我想先把它放在这里，晚一点再决定怎么回应。</textarea>
+          </label>
+          <p class="privacy">原文只属于你。匿名共鸣只读取相似感受，不公开身份。</p>
+          <button class="primary-action" type="button">放进泡泡</button>
+        </article>
+
+        <article class="phone compact" aria-label="Anonymous resonance screen">
+          <div class="status">
+            <span>09:41</span>
+            <span>匿名共鸣</span>
+          </div>
+          <header class="screen-head">
+            <div>
+              <p class="micro">相似泡泡 · 4 个</p>
+              <h2>不是只有你这样</h2>
+            </div>
+          </header>
+          <div class="resonance-bubbles" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <section class="card resonance">
+            <p class="label">匿名泡泡 27</p>
+            <p>“我也会在这个阶段把一句话放在心里很久。后来我发现，先让它待一会儿，比马上处理更容易一些。”</p>
+          </section>
+          <section class="card quiet">
+            <p class="label">相似点</p>
+            <p>一句话停留很久 · 需要更慢的恢复 · 想先安静一下</p>
+          </section>
+          <div class="two-actions">
+            <button type="button">谢谢你</button>
+            <button type="button">我也有过</button>
+          </div>
+        </article>
+
+        <article class="phone compact" aria-label="Monthly bubble review screen">
+          <div class="status">
+            <span>09:41</span>
+            <span>泡泡回看</span>
+          </div>
+          <header class="screen-head">
+            <div>
+              <p class="micro">6 月</p>
+              <h2>这个月的泡泡形状</h2>
+            </div>
+          </header>
+          <div class="bubble-calendar" aria-label="Monthly bubble map">
+            <span class="small"></span>
+            <span></span>
+            <span class="warm"></span>
+            <span class="small"></span>
+            <span class="rose"></span>
+            <span></span>
+            <span class="small"></span>
+            <span class="rose"></span>
+            <span class="warm"></span>
+            <span></span>
+            <span class="small"></span>
+            <span></span>
+          </div>
+          <section class="card">
+            <p class="label">月度趋势</p>
+            <h3>你的泡泡在周期后段更满</h3>
+            <p>下次进入类似阶段，可以提前留一个更松的晚上。</p>
+          </section>
+        </article>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
