@@ -1,11 +1,11 @@
 /**
- * CycleBubble 可交互 Demo
- * 底部 Tab 切换功能区 + 共鸣页连续翻阅下一条
+ * CycleBubble 精简版
+ * 核心流程：首页"写点什么" → 记录页"放进泡泡" → 共鸣页看到相似内容
  */
 (function () {
   "use strict";
 
-  // ====== Tab 切换 ======
+  // ====== 页面切换 ======
   function switchTo(name) {
     var screens = document.querySelectorAll(".screen");
     for (var i = 0; i < screens.length; i++) {
@@ -18,7 +18,6 @@
       if (body) body.scrollTop = 0;
     }
 
-    // 更新 Tab 高亮（只对主 Tab）
     var tabs = document.querySelectorAll(".tab-item");
     for (var j = 0; j < tabs.length; j++) {
       tabs[j].classList.remove("active");
@@ -27,12 +26,22 @@
     if (activeTab) activeTab.classList.add("active");
   }
 
-  // 绑定 Tab 点击
+  // 绑定 Tab
   var tabItems = document.querySelectorAll(".tab-item");
   for (var t = 0; t < tabItems.length; t++) {
     tabItems[t].addEventListener("click", function () {
       switchTo(this.getAttribute("data-goto"));
     });
+  }
+
+  // 绑定跳转按钮（data-goto）
+  var gotoEls = document.querySelectorAll("[data-goto]");
+  for (var g = 0; g < gotoEls.length; g++) {
+    if (!gotoEls[g].classList.contains("tab-item")) {
+      gotoEls[g].addEventListener("click", function () {
+        switchTo(this.getAttribute("data-goto"));
+      });
+    }
   }
 
   // 绑定返回按钮
@@ -43,67 +52,30 @@
     });
   }
 
-  // 绑定普通跳转链接
-  var gotoEls = document.querySelectorAll("[data-goto]");
-  for (var g = 0; g < gotoEls.length; g++) {
-    if (!gotoEls[g].classList.contains("tab-item")) {
-      gotoEls[g].addEventListener("click", function (e) {
-        e.preventDefault();
-        switchTo(this.getAttribute("data-goto"));
-      });
-    }
-  }
-
-  // ====== 记录页：标签选择 ======
-  var selectedChips = [];
-  var chipBtns = document.querySelectorAll("#chips button");
-  for (var c = 0; c < chipBtns.length; c++) {
-    chipBtns[c].addEventListener("click", function () {
-      this.classList.toggle("selected");
-      var chip = this.getAttribute("data-chip");
-      var idx = selectedChips.indexOf(chip);
-      if (idx > -1) selectedChips.splice(idx, 1);
-      else selectedChips.push(chip);
-    });
-  }
-
-  // ====== 记录页：保存 → AI 理解 ======
+  // ====== 记录页：放进泡泡 → AI 理解 → 跳共鸣 ======
   var saveBtn = document.getElementById("saveBtn");
   var aiProcessing = document.getElementById("aiProcessing");
-  var aiResult = document.getElementById("aiResult");
   var recordInput = document.getElementById("recordInput");
 
   if (saveBtn) {
     saveBtn.addEventListener("click", function () {
-      var text = recordInput ? recordInput.value.trim() : "";
-
-      if (!text && selectedChips.length === 0) {
-        if (recordInput) {
-          recordInput.value = "今天会议里有一句评价，我一直反复想起。好像不是那句话本身，而是我很在意自己有没有被认可。";
-        }
+      // 如果用户没写内容，填入默认内容
+      if (recordInput && !recordInput.value.trim()) {
+        recordInput.value = "今天会议里有一句评价，我一直反复想起。好像不是那句话本身，而是我很在意自己有没有被认可。";
       }
 
-      if (selectedChips.length === 0) {
-        var defaultChip = document.querySelector('#chips button[data-chip="被评价"]');
-        if (defaultChip) {
-          defaultChip.classList.add("selected");
-          selectedChips.push("被评价");
-        }
-      }
-
+      // 隐藏按钮，显示 AI 过程态
       saveBtn.style.display = "none";
       aiProcessing.hidden = false;
 
+      // 2 秒后跳转到共鸣页
       setTimeout(function () {
-        aiProcessing.hidden = true;
-        aiResult.hidden = false;
-
-        var resultText = aiResult.querySelector("p:not(.label):not(.link-row)");
-        if (resultText && selectedChips.length > 0) {
-          var chipStr = selectedChips.join("、");
-          resultText.innerHTML =
-            "你提到的场景，和 <strong>" + chipStr + "</strong> 有关。这类感受在<strong>黄体期</strong>更容易出现。";
-        }
+        switchTo("resonance");
+        // 重置记录页，方便再次体验
+        setTimeout(function () {
+          saveBtn.style.display = "";
+          aiProcessing.hidden = true;
+        }, 500);
       }, 2000);
     });
   }
@@ -111,7 +83,6 @@
   // ====== 共鸣页：连续翻阅 ======
   var resonanceCards = document.querySelectorAll(".resonance-card");
   var pageDots = document.querySelectorAll("#pageDots i");
-  var pagerHint = document.getElementById("pagerHint");
   var currentIndex = 0;
   var totalCards = resonanceCards.length;
 
@@ -120,18 +91,11 @@
       pageDots[d].classList.remove("active");
     }
     if (pageDots[currentIndex]) pageDots[currentIndex].classList.add("active");
-
-    if (currentIndex >= totalCards - 1) {
-      if (pagerHint) pagerHint.textContent = "这是最后一条，看看你的规律 →";
-    } else {
-      if (pagerHint) pagerHint.textContent = "回应后自动看到下一条";
-    }
   }
 
   function nextCard() {
     if (currentIndex >= totalCards - 1) return;
 
-    // 当前卡片滑出
     resonanceCards[currentIndex].classList.remove("active");
     resonanceCards[currentIndex].classList.add("leaving");
 
@@ -143,7 +107,6 @@
     }, 450);
   }
 
-  // 绑定共鸣卡片的"我也有过"和"谢谢你"按钮
   var empathyBtns = document.querySelectorAll(".empathy-btn");
   var thankBtns = document.querySelectorAll(".thank-btn");
 
@@ -152,12 +115,7 @@
       this.classList.add("responded");
       this.textContent = "已表达";
       this.disabled = true;
-
-      // 1.2 秒后自动滑到下一条
-      var self = this;
-      setTimeout(function () {
-        nextCard();
-      }, 1200);
+      setTimeout(nextCard, 1200);
     });
   }
 
@@ -166,15 +124,8 @@
       this.classList.add("responded");
       this.textContent = "已感谢";
       this.disabled = true;
-
-      var self = this;
-      setTimeout(function () {
-        nextCard();
-      }, 1200);
+      setTimeout(nextCard, 1200);
     });
   }
-
-  // 初始化
-  updatePager();
 
 })();
