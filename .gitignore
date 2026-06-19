@@ -1,24 +1,22 @@
-# OS / editor
-.DS_Store
-Thumbs.db
-desktop.ini
-.vscode/
-.idea/
+# CycleBubble ignore rules
 
-# Dependencies / build outputs
-node_modules/
-dist/
-build/
-.cache/
-
-# Temporary and generated archives
-*.zip
-*.tmp
-*.log
-
-# Academic papers should not be pushed
+# Academic papers should not be pushed to GitHub
 cyclebubble_literature/papers/
 *.pdf
 
-# Uploaded or transient files
+# Local / temporary files
 .uploads/
+*.zip
+*.tmp
+*.log
+*.bak
+*_b64_*.txt
+
+# Dependencies and build outputs
+node_modules/
+dist/
+build/
+
+# System files
+.DS_Store
+Thumbs.db
