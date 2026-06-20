@@ -151,4 +151,38 @@
     });
   }
 
+  // ====== 泡泡水流动画 — 实时更新 SVG path ======
+  var waveBack = document.getElementById("waveBack");
+  var waveMid = document.getElementById("waveMid");
+  var waveFront = document.getElementById("waveFront");
+
+  if (waveBack && waveMid && waveFront) {
+    var waves = [
+      { el: waveBack, amp: 7, freq: 0.045, speed: 0.8, phase: 0 },
+      { el: waveMid, amp: 6, freq: 0.055, speed: 1.1, phase: 1.5 },
+      { el: waveFront, amp: 5, freq: 0.04, speed: 0.6, phase: 3.0 }
+    ];
+
+    function buildWavePath(t, amp, freq, speed, phase) {
+      var points = [];
+      var baseline = 20;
+      for (var x = 0; x <= 600; x += 10) {
+        var y = baseline + Math.sin(x * freq + t * speed + phase) * amp;
+        points.push(x + "," + y.toFixed(2));
+      }
+      return "M" + points.join(" L") + " L600,40 L0,40 Z";
+    }
+
+    var startTime = performance.now();
+    function animateWaves(now) {
+      var t = (now - startTime) / 1000;
+      for (var i = 0; i < waves.length; i++) {
+        var w = waves[i];
+        w.el.setAttribute("d", buildWavePath(t, w.amp, w.freq, w.speed, w.phase));
+      }
+      requestAnimationFrame(animateWaves);
+    }
+    requestAnimationFrame(animateWaves);
+  }
+
 })();
