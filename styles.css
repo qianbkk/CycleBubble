@@ -462,50 +462,67 @@ button:focus-visible, textarea:focus-visible {
   filter: blur(5px);
 }
 
-.wave {
+/* SVG 波浪 — 真实曲线流动 */
+.wave-svg {
   position: absolute;
-  left: -58%;
-  width: 216%;
-  border-radius: 50%;
+  left: -60%;
+  width: 220%;
+  height: 36px;
+  z-index: 2;
   pointer-events: none;
-  mix-blend-mode: screen;
 }
 
-.wave-one {
-  top: -20px;
-  height: 62px;
-  background:
-    radial-gradient(ellipse at 18% 54%, rgba(255,255,255,.30), transparent 22%),
-    radial-gradient(ellipse at 47% 48%, rgba(255,255,255,.22), transparent 20%),
-    radial-gradient(ellipse at 78% 54%, rgba(255,255,255,.26), transparent 24%),
-    rgba(255,255,255,.20);
+.wave-svg path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
-.wave-two {
-  top: 20px;
-  height: 44px;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 8px,
-      rgba(255,255,255,.10) 9px 10px,
-      transparent 11px 22px
-    ),
-    radial-gradient(ellipse at 30% 42%, rgba(255,255,255,.17), transparent 30%),
-    radial-gradient(ellipse at 72% 56%, rgba(255,255,255,.14), transparent 32%);
-  opacity: .88;
-  transform: rotate(1.5deg);
+.wave-svg-back {
+  top: -14px;
+  opacity: .55;
+}
+.wave-svg-back path {
+  stroke: rgba(255, 255, 255, .42);
+  fill: rgba(255, 236, 238, .20);
 }
 
-.wave-three {
-  top: -2px;
-  height: 56px;
-  background:
-    radial-gradient(ellipse at 22% 50%, rgba(212,165,207,.18), transparent 28%),
-    radial-gradient(ellipse at 64% 46%, rgba(255,255,255,.14), transparent 30%),
-    rgba(212,165,207,.08);
-  opacity: .82;
+.wave-svg-mid {
+  top: 2px;
+  opacity: .65;
 }
+.wave-svg-mid path {
+  stroke: rgba(255, 255, 255, .30);
+  fill: transparent;
+}
+
+.wave-svg-front {
+  top: -6px;
+  opacity: .50;
+}
+.wave-svg-front path {
+  stroke: rgba(212, 165, 207, .36);
+  fill: transparent;
+}
+
+/* 内部流线 — 曲线流动 */
+.flow-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.flow-line {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.flow-line-1 { stroke: rgba(255, 255, 255, .28); }
+.flow-line-2 { stroke: rgba(255, 236, 238, .22); }
+.flow-line-3 { stroke: rgba(212, 165, 207, .20); }
 
 .glow { position: absolute; border-radius: 50%; background: rgba(255,255,255,.45); filter: blur(4px); pointer-events: none; }
 .glow-one { width: 38px; height: 38px; left: 26%; bottom: 18%; }
@@ -539,16 +556,30 @@ button:focus-visible, textarea:focus-visible {
     animation: water-surface 11s ease-in-out infinite reverse;
   }
 
-  .wave-one {
-    animation: slow-current 10s ease-in-out infinite;
+  /* SVG 波浪 — 沿曲线持续流动 */
+  .wave-svg-back {
+    animation: wave-flow 7s linear infinite;
   }
 
-  .wave-two {
-    animation: slow-current-soft 13s ease-in-out infinite reverse;
+  .wave-svg-mid {
+    animation: wave-flow 5.5s linear infinite reverse;
   }
 
-  .wave-three {
-    animation: slow-current-third 16s ease-in-out infinite;
+  .wave-svg-front {
+    animation: wave-flow 9s linear infinite;
+  }
+
+  /* 内部流线 — 曲线流动 + 呼吸显隐 */
+  .flow-line-1 {
+    animation: flow-draw 6s ease-in-out infinite, flow-fade 6s ease-in-out infinite;
+  }
+
+  .flow-line-2 {
+    animation: flow-draw 8s ease-in-out infinite .8s, flow-fade 8s ease-in-out infinite .8s;
+  }
+
+  .flow-line-3 {
+    animation: flow-draw 7s ease-in-out infinite 1.6s, flow-fade 7s ease-in-out infinite 1.6s;
   }
 
   .breathing-bubble::before {
@@ -602,34 +633,23 @@ button:focus-visible, textarea:focus-visible {
   }
 }
 
-@keyframes slow-current {
-  0%, 100% {
-    transform: translateX(-14%) translateY(0) rotate(-2.2deg);
-  }
-
-  50% {
-    transform: translateX(14%) translateY(-3px) rotate(1.2deg);
-  }
+/* SVG 波浪持续流动 — 不回弹的线性流动 */
+@keyframes wave-flow {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
-@keyframes slow-current-soft {
-  0%, 100% {
-    transform: translateX(13%) translateY(1px) rotate(1.8deg);
-  }
-
-  50% {
-    transform: translateX(-13%) translateY(-3px) rotate(-1.1deg);
-  }
+/* 内部流线 — 沿路径绘制 */
+@keyframes flow-draw {
+  0% { stroke-dashoffset: 300; stroke-dasharray: 300; }
+  40% { stroke-dashoffset: 0; stroke-dasharray: 300; }
+  80% { stroke-dashoffset: -300; stroke-dasharray: 300; }
+  100% { stroke-dashoffset: -300; stroke-dasharray: 300; }
 }
 
-@keyframes slow-current-third {
-  0%, 100% {
-    transform: translateX(-10%) translateY(2px) rotate(.8deg);
-  }
-
-  50% {
-    transform: translateX(11%) translateY(-2px) rotate(-.9deg);
-  }
+@keyframes flow-fade {
+  0%, 100% { opacity: 0; }
+  20%, 70% { opacity: 1; }
 }
 
 @keyframes water-lines {
