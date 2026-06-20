@@ -486,3 +486,85 @@ button:focus-visible, textarea:focus-visible {
   .phone-screen { height: 100vh; border-radius: 0; border: none; }
   .breathing-bubble { width: 180px; }
 }
+
+/* ====== 关于入口 ====== */
+.about-link {
+  margin-top: 20px;
+  border: none;
+  background: transparent;
+  color: var(--subtle);
+  font-size: 12px;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line);
+  transition: color .2s;
+}
+
+.about-link:hover { color: var(--coral); }
+
+/* ====== 关于弹层 ====== */
+.about-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(45, 38, 48, .32);
+  backdrop-filter: blur(4px);
+  animation: modal-fade .25s ease;
+}
+
+.about-modal[hidden] { display: none; }
+
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.about-modal-card {
+  width: 100%;
+  max-width: 320px;
+  padding: 28px 24px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 30px 80px rgba(82, 63, 74, .2);
+  animation: modal-rise .3s cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes modal-rise {
+  from { opacity: 0; transform: translateY(16px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.about-modal-card h3 {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.about-modal-card p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.about-modal-card p:last-of-type { margin-bottom: 20px; }
+
+.about-close {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  color: #fffdfb;
+  background: var(--coral);
+  transition: opacity .15s;
+}
+
+.about-close:hover { opacity: .88; }

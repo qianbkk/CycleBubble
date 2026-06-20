@@ -128,4 +128,27 @@
     });
   }
 
+  // ====== 关于弹层 ======
+  var aboutLink = document.getElementById("aboutLink");
+  var aboutModal = document.getElementById("aboutModal");
+  var aboutClose = document.getElementById("aboutClose");
+
+  if (aboutLink) {
+    aboutLink.addEventListener("click", function () {
+      aboutModal.hidden = false;
+    });
+  }
+
+  if (aboutClose) {
+    aboutClose.addEventListener("click", function () {
+      aboutModal.hidden = true;
+    });
+  }
+
+  if (aboutModal) {
+    aboutModal.addEventListener("click", function (e) {
+      if (e.target === aboutModal) aboutModal.hidden = true;
+    });
+  }
+
 })();
