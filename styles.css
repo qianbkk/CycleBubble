@@ -640,31 +640,8 @@ button:focus-visible, textarea:focus-visible {
     animation: liquid-sway 7.8s ease-in-out infinite;
   }
 
-  /* SVG 波浪 — 沿曲线持续流动 */
-  .wave-svg-back {
-    animation: wave-flow 7s linear infinite;
-  }
-
-  .wave-svg-mid {
-    animation: wave-flow 5.5s linear infinite reverse;
-  }
-
-  .wave-svg-front {
-    animation: wave-flow 9s linear infinite;
-  }
-
-  /* 内部流线 — 曲线流动 + 呼吸显隐 */
-  .flow-line-1 {
-    animation: flow-draw 6s ease-in-out infinite, flow-fade 6s ease-in-out infinite;
-  }
-
-  .flow-line-2 {
-    animation: flow-draw 8s ease-in-out infinite .8s, flow-fade 8s ease-in-out infinite .8s;
-  }
-
-  .flow-line-3 {
-    animation: flow-draw 7s ease-in-out infinite 1.6s, flow-fade 7s ease-in-out infinite 1.6s;
-  }
+  /* SVG 波浪 — 由 JS requestAnimationFrame 实时更新 path d 属性 */
+  /* 无需 CSS animation，波浪点真实移动 */
 
   .breathing-bubble::before {
     animation: water-lines 14s linear infinite;
