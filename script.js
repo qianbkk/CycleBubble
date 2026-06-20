@@ -158,9 +158,9 @@
 
   if (waveBack && waveMid && waveFront) {
     var waves = [
-      { el: waveBack, amp: 7, freq: 0.045, speed: 0.8, phase: 0 },
-      { el: waveMid, amp: 6, freq: 0.055, speed: 1.1, phase: 1.5 },
-      { el: waveFront, amp: 5, freq: 0.04, speed: 0.6, phase: 3.0 }
+      { el: waveBack, amp: 10, freq: 0.04, speed: 0.7, phase: 0 },
+      { el: waveMid, amp: 8, freq: 0.05, speed: 1.0, phase: 1.5 },
+      { el: waveFront, amp: 6, freq: 0.045, speed: 0.5, phase: 3.0 }
     ];
 
     function buildWavePath(t, amp, freq, speed, phase) {
