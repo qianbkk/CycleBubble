@@ -228,6 +228,37 @@ button { cursor: pointer; }
 .glow-one { width: 44px; height: 44px; left: 24%; bottom: 16%; }
 .glow-two { width: 32px; height: 32px; right: 18%; bottom: 36%; background: rgba(212,165,207,.48); }
 
+/* ====== 共鸣光点 ====== */
+.light-points {
+  position: absolute;
+  inset: 10% 15%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.light-point {
+  position: absolute;
+  border-radius: 50%;
+  animation: light-point-appear 1s cubic-bezier(.4, 0, .2, 1) forwards;
+}
+
+.light-point--connection {
+  width: 6px; height: 6px;
+  background: rgba(255, 255, 255, .70);
+  box-shadow: 0 0 8px rgba(255, 255, 255, .40);
+}
+
+.light-point--warmth {
+  width: 7px; height: 7px;
+  background: rgba(255, 230, 200, .75);
+  box-shadow: 0 0 10px rgba(255, 200, 160, .45);
+}
+
+@keyframes light-point-appear {
+  from { opacity: 0; transform: scale(0); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .bubble-light {
   position: absolute; z-index: 2; left: 28%; bottom: 29%;
   width: 100px; height: 26px; border-radius: 50%;
@@ -393,6 +424,21 @@ textarea::placeholder { color: var(--subtle); }
 .resonance-lead strong {
   color: var(--rose);
   font-weight: 700;
+}
+
+/* 陪伴语 */
+.insight-companion {
+  padding-top: 12px;
+}
+
+.companion-text {
+  margin: 0;
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.8;
+  color: var(--muted);
+  border-left: 2px solid var(--mist-pink);
+  padding-left: 14px;
 }
 
 /* ====== 共鸣页 ====== */
