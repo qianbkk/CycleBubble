@@ -1,6 +1,7 @@
 /**
- * CycleBubble 精简版
- * 核心流程：首页"写点什么" → 记录页"放进泡泡" → 共鸣页看到相似内容
+ * CycleBubble v2
+ * 核心理念：帮助用户理解身体与情绪之间的关系，而不是管理情绪
+ * 流程：首页 Bubble → 记录今天发生了什么 → AI 理解 + 周期解释 → 匿名共鸣
  */
 (function () {
   "use strict";
@@ -61,7 +62,7 @@
     saveBtn.addEventListener("click", function () {
       // 如果用户没写内容，填入默认内容
       if (recordInput && !recordInput.value.trim()) {
-        recordInput.value = "今天会议里有一句评价，我一直反复想起。好像不是那句话本身，而是我很在意自己有没有被认可。";
+        recordInput.value = "今天开会时领导说了一句话，我反复想了一整天。好像在意的是自己有没有被认可。";
       }
 
       // 隐藏按钮，显示 AI 过程态
