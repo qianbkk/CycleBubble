@@ -70,8 +70,11 @@
       aiProcessing.hidden = false;
 
       // 2 秒后跳转到 AI 理解结果页
+      bubbleRecorded();
       setTimeout(function () {
         switchTo("insight");
+        // AI 分析完成，Bubble 增加光泽
+        setTimeout(bubbleAnalyzed, 600);
         // 重置记录页，方便再次体验
         setTimeout(function () {
           saveBtn.style.display = "";
@@ -117,6 +120,8 @@
       this.classList.add("responded");
       this.textContent = "已表达";
       this.disabled = true;
+      // Bubble 增加一个连接光点
+      addLightPoint("connection");
       setTimeout(nextCard, 1200);
     });
   }
@@ -126,6 +131,8 @@
       this.classList.add("responded");
       this.textContent = "已感谢";
       this.disabled = true;
+      // Bubble 增加一个温暖光点
+      addLightPoint("warmth");
       setTimeout(nextCard, 1200);
     });
   }
@@ -151,6 +158,42 @@
     aboutModal.addEventListener("click", function (e) {
       if (e.target === aboutModal) aboutModal.hidden = true;
     });
+  }
+
+  // ====== Bubble 与交互绑定 ======
+  var lightPoints = document.getElementById("lightPoints");
+  var mainBubble = document.getElementById("mainBubble");
+
+  // 在液体区域内随机位置创建一个光点
+  function addLightPoint(type) {
+    if (!lightPoints) return;
+    var point = document.createElement("span");
+    point.className = "light-point light-point--" + type;
+    // 随机位置（在液体区域内）
+    var left = 15 + Math.random() * 70; // 15%-85%
+    var bottom = 10 + Math.random() * 60; // 10%-70% from bottom
+    point.style.left = left + "%";
+    point.style.bottom = bottom + "%";
+    lightPoints.appendChild(point);
+  }
+
+  // 记录完成后，Bubble 微微变化（增加一点光泽）
+  function bubbleRecorded() {
+    if (!mainBubble) return;
+    mainBubble.style.filter = "brightness(1.06) saturate(1.05)";
+    setTimeout(function () {
+      mainBubble.style.filter = "";
+    }, 1200);
+  }
+
+  // AI 分析完成，Bubble 增加光泽
+  function bubbleAnalyzed() {
+    if (!mainBubble) return;
+    mainBubble.style.filter = "brightness(1.08) saturate(1.08)";
+    addLightPoint("connection");
+    setTimeout(function () {
+      mainBubble.style.filter = "";
+    }, 1800);
   }
 
   // ====== 泡泡水流动画 — 实时更新 SVG path ======
