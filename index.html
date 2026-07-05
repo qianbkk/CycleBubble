@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>CycleBubble 呼吸泡泡</title>
     <meta name="description" content="CycleBubble — 先感知自己的状态，再理解它从哪里来。">
-    <link rel="stylesheet" href="./styles.css?v=20260620c">
+    <link rel="stylesheet" href="./styles.css?v=20260705">
   </head>
   <body>
     <main class="phone-frame" aria-label="CycleBubble">
@@ -13,8 +13,9 @@
 
         <!-- ====== 首页 ====== -->
         <div class="screen screen-home active" data-screen="home">
-          <div class="screen-body">
-            <p class="date-line">6 月 19 日 · 周期第 21 天</p>
+          <div class="screen-body" style="justify-content:flex-start;padding-top:24px;">
+            <p class="home-greeting">今天的你</p>
+            <p class="home-cycle-info">这轮周期第 21 天 · 可能处于黄体期</p>
 
             <section class="breathing-bubble-wrap" aria-label="Current cycle bubble">
               <div class="breathing-bubble">
@@ -38,6 +39,18 @@
                   <span>感受会更敏锐的几天</span>
                 </div>
               </div>
+            </section>
+
+            <p class="home-gentle-note">这几天，身体可能让感受变得更敏锐。<br>如果一句话被你反复想起，不一定是你太脆弱。</p>
+
+            <section class="clue-card">
+              <h3 class="clue-title">最近 7 天，你常提到</h3>
+              <div class="clue-tags">
+                <span class="clue-tag">疲惫</span>
+                <span class="clue-tag">被评价</span>
+                <span class="clue-tag">想安静</span>
+              </div>
+              <p class="clue-note">这些记录可能集中在黄体期前后。</p>
             </section>
 
             <button class="about-link" type="button" id="aboutLink">关于 CycleBubble</button>
@@ -74,6 +87,24 @@
           </div>
         </div>
 
+        <!-- ====== AI 理解结果页 ====== -->
+        <div class="screen screen-insight" data-screen="insight">
+          <div class="nav-bar">
+            <button class="back-btn" type="button" data-back="record">‹</button>
+            <span class="nav-title">理解</span>
+            <span class="nav-spacer"></span>
+          </div>
+          <div class="screen-body">
+            <section class="insight-card">
+              <h3>CycleBubble 理解到</h3>
+              <p id="insightBody">这次记录里，你提到了"被评价"和"反复回想"。结合当前周期阶段，这几天感受可能更容易被放大。这不是诊断，只是一个帮助你理解自己的线索。</p>
+            </section>
+            <div class="action-stack" style="padding:0; margin-top:24px;">
+              <button class="primary-action" type="button" data-goto="resonance">看看有谁和你一样</button>
+            </div>
+          </div>
+        </div>
+
         <!-- ====== 共鸣页 ====== -->
         <div class="screen screen-resonance" data-screen="resonance">
           <div class="nav-bar">
@@ -85,6 +116,8 @@
             <header class="screen-head">
               <h2>不是只有你这样</h2>
             </header>
+
+            <p class="resonance-intro">因为你提到了相似的场景和感受，CycleBubble 为你找到了匿名共鸣。</p>
 
             <div class="resonance-stack" id="resonanceStack">
               <section class="resonance-card active" data-index="0">
@@ -157,6 +190,6 @@
       </div>
     </div>
 
-    <script src="./script.js?v=20260620c"></script>
+    <script src="./script.js?v=20260705"></script>
   </body>
 </html>
