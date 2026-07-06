@@ -1,162 +1,198 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>CycleBubble 呼吸泡泡</title>
-    <meta name="description" content="CycleBubble — 先感知自己的状态，再理解它从哪里来。">
-    <link rel="stylesheet" href="./styles.css?v=20260620b">
-  </head>
-  <body>
-    <main class="phone-frame" aria-label="CycleBubble">
-      <div class="phone-screen" id="phone">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CycleBubble</title>
+  <meta name="description" content="CycleBubble — 一个属于你的情绪空间。">
+  <link rel="stylesheet" href="./styles.css?v=20260706c">
+</head>
+<body>
+  <main class="phone-frame" aria-label="CycleBubble">
+    <div class="phone-screen" id="phone">
 
-        <!-- ====== 首页 ====== -->
-        <div class="screen screen-home active" data-screen="home">
-          <div class="screen-body">
-            <p class="date-line">6 月 19 日 · 周期第 21 天</p>
+      <!-- ====== 首页 ====== -->
+      <div class="screen screen-home active" data-screen="home">
+        <div class="screen-body">
+          <p class="cycle-status" id="cycleStatus">黄体期｜今天身体可能比平时更容易放大情绪感受</p>
 
-            <section class="breathing-bubble-wrap" aria-label="Current cycle bubble">
-              <div class="breathing-bubble">
-                <div class="bubble-glass"></div>
-                <div class="bubble-liquid" id="bubbleLiquid">
-                  <svg class="wave-svg wave-svg-back" viewBox="0 0 600 40" preserveAspectRatio="none">
-                    <path id="waveBack" d="M0,20 Q37.5,8 75,20 T150,20 T225,20 T300,20 T375,20 T450,20 T525,20 T600,20 L600,40 L0,40 Z" />
-                  </svg>
-                  <svg class="wave-svg wave-svg-mid" viewBox="0 0 600 40" preserveAspectRatio="none">
-                    <path id="waveMid" d="M0,20 Q37.5,32 75,20 T150,20 T225,20 T300,20 T375,20 T450,20 T525,20 T600,20 L600,40 L0,40 Z" />
-                  </svg>
-                  <svg class="wave-svg wave-svg-front" viewBox="0 0 600 40" preserveAspectRatio="none">
-                    <path id="waveFront" d="M0,20 Q37.5,12 75,20 T150,20 T225,20 T300,20 T375,20 T450,20 T525,20 T600,20 L600,40 L0,40 Z" />
-                  </svg>
-                  <span class="glow glow-one"></span>
-                  <span class="glow glow-two"></span>
-                </div>
-                <div class="bubble-light"></div>
-                <div class="bubble-text">
-                  <strong>黄体期</strong>
-                  <span>感受会更敏锐的几天</span>
-                </div>
+          <section class="bubble-wrap" aria-label="你的泡泡">
+            <div class="breathing-bubble" id="mainBubble">
+              <div class="bubble-glass"></div>
+              <div class="bubble-liquid" id="bubbleLiquid">
+                <svg class="wave-svg wave-svg-back" viewBox="0 0 600 40" preserveAspectRatio="none">
+                  <path id="waveBack" d="M0,20 Q37.5,8 75,20 T150,20 T225,20 T300,20 T375,20 T450,20 T525,20 T600,20 L600,40 L0,40 Z" />
+                </svg>
+                <svg class="wave-svg wave-svg-mid" viewBox="0 0 600 40" preserveAspectRatio="none">
+                  <path id="waveMid" d="M0,20 Q37.5,32 75,20 T150,20 T225,20 T300,20 T375,20 T450,20 T525,20 T600,20 L600,40 L0,40 Z" />
+                </svg>
+                <svg class="wave-svg wave-svg-front" viewBox="0 0 600 40" preserveAspectRatio="none">
+                  <path id="waveFront" d="M0,20 Q37.5,12 75,20 T150,20 T225,20 T300,20 T375,20 T450,20 T525,20 T600,20 L600,40 L0,40 Z" />
+                </svg>
+                <span class="bubble-texture" id="bubbleTexture"></span>
+                <span class="floating-particles" id="floatingParticles"></span>
+                <span class="light-points" id="lightPoints"></span>
+                <span class="glow glow-one"></span>
+                <span class="glow glow-two"></span>
+              </div>
+              <div class="bubble-light"></div>
+              <div class="bubble-text">
+                <strong id="bubblePhase">黄体期</strong>
+                <span id="bubbleHint">感受会更敏锐的几天</span>
+              </div>
+            </div>
+          </section>
+
+          <button class="about-link" type="button" id="aboutLink">关于 CycleBubble</button>
+        </div>
+        <div class="action-stack">
+          <button class="primary-action" type="button" data-goto="record">把今天留在这里</button>
+        </div>
+      </div>
+
+      <!-- ====== 记录页 ====== -->
+      <div class="screen screen-record" data-screen="record">
+        <div class="nav-bar">
+          <button class="back-btn" type="button" data-back="home">‹</button>
+          <span class="nav-title">记录</span>
+          <span class="nav-spacer"></span>
+        </div>
+        <div class="screen-body">
+          <header class="screen-head" id="recordHead">
+            <h2>今天发生了什么？</h2>
+          </header>
+          <label class="note-field" id="noteField">
+            <textarea id="recordInput" placeholder="写下具体场景和你的感受……"></textarea>
+          </label>
+          <div class="bubble-settling" id="bubbleSettling" hidden>
+            <div class="settling-bubble" id="settlingBubble">
+              <div class="bubble-glass"></div>
+              <div class="bubble-liquid settling-liquid" id="settlingLiquid">
+                <svg class="wave-svg wave-svg-back" viewBox="0 0 600 40" preserveAspectRatio="none">
+                  <path d="M0,20 Q37.5,8 75,20 T150,20 T225,20 T300,20 T375,20 T450,20 T525,20 T600,20 L600,40 L0,40 Z" />
+                </svg>
+                <svg class="wave-svg wave-svg-mid" viewBox="0 0 600 40" preserveAspectRatio="none">
+                  <path d="M0,20 Q37.5,32 75,20 T150,20 T225,20 T300,20 T375,20 T450,20 T525,20 T600,20 L600,40 L0,40 Z" />
+                </svg>
+                <span class="floating-particles" id="settlingParticles"></span>
+              </div>
+            </div>
+            <p class="settling-text" id="settlingText">Bubble 正在轻轻回应今天……</p>
+          </div>
+        </div>
+        <div class="action-stack">
+          <button class="primary-action" type="button" id="saveBtn">放进泡泡</button>
+        </div>
+      </div>
+
+      <!-- ====== 发现页 ====== -->
+      <div class="screen screen-insight" data-screen="insight">
+        <div class="nav-bar">
+          <button class="back-btn" type="button" data-back="home">‹</button>
+          <span class="nav-title">发现</span>
+          <span class="nav-spacer"></span>
+        </div>
+        <div class="screen-body">
+          <section class="insight-highlight">
+            <p class="highlight-text">你并不是太敏感，而是一直在默默消化别人随口说出的话。</p>
+          </section>
+          <section class="insight-detail">
+            <h3>为什么这样说</h3>
+            <p>今天你反复想起领导的一句话。真正触动的不是那句话本身，而是你对"有没有被认可"这件事长期的在意。</p>
+            <p>被评价时反复回想，是很多女性在黄体期常见的感受——不是因为脆弱，而是身体在这个阶段对变化更敏锐。</p>
+          </section>
+          <section class="insight-companion-section">
+            <p class="companion-text">"你不需要对每一种感受都找到理由。有时候，身体只是需要你允许它这样。"</p>
+          </section>
+          <section class="resonance-lead">
+            <p>今天还有 <strong>42 位</strong>处于相似阶段的女性提到了类似感受。</p>
+          </section>
+          <div class="action-stack" style="padding:0; margin-top:24px;">
+            <button class="primary-action" type="button" data-goto="resonance">看看她们怎么说</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 共鸣页 ====== -->
+      <div class="screen screen-resonance" data-screen="resonance">
+        <div class="nav-bar">
+          <button class="back-btn" type="button" data-back="insight">‹</button>
+          <span class="nav-title">共鸣</span>
+          <span class="nav-spacer"></span>
+        </div>
+        <div class="screen-body">
+          <header class="screen-head">
+            <h2>不是只有你这样</h2>
+            <p class="resonance-intro">以下来自同样处于黄体期的匿名女性，她们提到了和你相似的感受。</p>
+          </header>
+          <div class="resonance-stack" id="resonanceStack">
+            <section class="resonance-card active" data-index="0">
+              <p class="anonymous">匿名泡泡 27</p>
+              <p class="quote">"我也会在这个阶段把一句话放在心里很久。后来我发现，那不一定是自己变脆弱了，而是当时更需要确认和安静恢复。"</p>
+              <div class="resonance-actions">
+                <button type="button" class="chip-btn empathy-btn">我也有过</button>
+                <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
               </div>
             </section>
-
-            <button class="about-link" type="button" id="aboutLink">关于 CycleBubble</button>
-          </div>
-
-          <div class="action-stack">
-            <button class="primary-action" type="button" data-goto="record">写点什么</button>
-          </div>
-        </div>
-
-        <!-- ====== 记录页 ====== -->
-        <div class="screen screen-record" data-screen="record">
-          <div class="nav-bar">
-            <button class="back-btn" type="button" data-back="home">‹</button>
-            <span class="nav-title">记录</span>
-            <span class="nav-spacer"></span>
-          </div>
-          <div class="screen-body">
-            <header class="screen-head">
-              <h2>今天什么事情停在心里？</h2>
-            </header>
-
-            <label class="note-field">
-              <textarea id="recordInput" placeholder="写下具体场景……"></textarea>
-            </label>
-
-            <div class="ai-processing" id="aiProcessing" hidden>
-              <div class="ai-pulse"></div>
-              <p>正在理解你写下的场景……</p>
-            </div>
-          </div>
-          <div class="action-stack">
-            <button class="primary-action" type="button" id="saveBtn">放进泡泡</button>
-          </div>
-        </div>
-
-        <!-- ====== 共鸣页 ====== -->
-        <div class="screen screen-resonance" data-screen="resonance">
-          <div class="nav-bar">
-            <button class="back-btn" type="button" data-back="home">‹</button>
-            <span class="nav-title">共鸣</span>
-            <span class="nav-spacer"></span>
-          </div>
-          <div class="screen-body">
-            <header class="screen-head">
-              <h2>不是只有你这样</h2>
-            </header>
-
-            <div class="resonance-stack" id="resonanceStack">
-              <section class="resonance-card active" data-index="0">
-                <p class="anonymous">匿名泡泡 27</p>
-                <p class="quote">"我也会在这个阶段把一句话放在心里很久。后来我发现，那不一定是自己变脆弱了，而是当时更需要确认和安静恢复。"</p>
-                <div class="resonance-actions">
-                  <button type="button" class="chip-btn empathy-btn">我也有过</button>
-                  <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
-                </div>
-              </section>
-
-              <section class="resonance-card" data-index="1">
-                <p class="anonymous">匿名泡泡 41</p>
-                <p class="quote">"每次到这个阶段，我都会对别人的语气特别敏感。不是矫情，是身体在告诉我需要更多确定感。"</p>
-                <div class="resonance-actions">
-                  <button type="button" class="chip-btn empathy-btn">我也有过</button>
-                  <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
-                </div>
-              </section>
-
-              <section class="resonance-card" data-index="2">
-                <p class="anonymous">匿名泡泡 15</p>
-                <p class="quote">"以前总觉得自己太敏感，后来记录了几个月才发现，这种敏感真的有规律。知道有规律之后，反而没那么怕了。"</p>
-                <div class="resonance-actions">
-                  <button type="button" class="chip-btn empathy-btn">我也有过</button>
-                  <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
-                </div>
-              </section>
-            </div>
-
-            <div class="resonance-pager">
-              <span class="page-dots" id="pageDots">
-                <i class="active"></i><i></i><i></i>
-              </span>
-            </div>
-
-            <section class="understanding-card">
-              <h3>这个阶段，感受会更敏锐</h3>
-              <p>同样的事情，在周期的不同时间会有不同的重量。这很正常。</p>
+            <section class="resonance-card" data-index="1">
+              <p class="anonymous">匿名泡泡 41</p>
+              <p class="quote">"每次到这个阶段，我都会对别人的语气特别敏感。不是矫情，是身体在告诉我需要更多确定感。"</p>
+              <div class="resonance-actions">
+                <button type="button" class="chip-btn empathy-btn">我也有过</button>
+                <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
+              </div>
+            </section>
+            <section class="resonance-card" data-index="2">
+              <p class="anonymous">匿名泡泡 15</p>
+              <p class="quote">"以前总觉得自己太敏感，后来记录了几个月才发现，这种敏感真的有规律。知道有规律之后，反而没那么怕了。"</p>
+              <div class="resonance-actions">
+                <button type="button" class="chip-btn empathy-btn">我也有过</button>
+                <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
+              </div>
             </section>
           </div>
+          <div class="resonance-pager">
+            <span class="page-dots" id="pageDots">
+              <i class="active"></i><i></i><i></i>
+            </span>
+          </div>
+          <section class="understanding-card">
+            <h3>同样的事情，在周期的不同时间会有不同的重量</h3>
+            <p>这很正常。</p>
+          </section>
         </div>
-
-        <!-- ====== 底部 Tab ====== -->
-        <nav class="tabbar" aria-label="App sections">
-          <span class="tab-item active" data-goto="home">
-            <span class="tab-icon icon-today" aria-hidden="true"><i></i></span>
-            <span>今日</span>
-          </span>
-          <span class="tab-item" data-goto="record">
-            <span class="tab-icon icon-record" aria-hidden="true"><i></i></span>
-            <span>记录</span>
-          </span>
-          <span class="tab-item" data-goto="resonance">
-            <span class="tab-icon icon-resonance" aria-hidden="true"><i></i></span>
-            <span>共鸣</span>
-          </span>
-        </nav>
-
       </div>
-    </main>
 
-    <!-- ====== 关于弹层 ====== -->
-    <div class="about-modal" id="aboutModal" hidden>
-      <div class="about-modal-card">
-        <h3>关于 CycleBubble</h3>
-        <p>CycleBubble 根据月经周期的四个阶段——月经期、卵泡期、排卵期、黄体期——提供身体背景的参考，帮助理解感受和身体之间的关系。</p>
-        <p>这不是预测，也不是诊断。如果情绪持续困扰你，建议咨询专业人士。</p>
-        <button class="about-close" type="button" id="aboutClose">知道了</button>
-      </div>
+      <!-- ====== 底部 Tab ====== -->
+      <nav class="tabbar" aria-label="App sections">
+        <span class="tab-item active" data-goto="home">
+          <span class="tab-icon icon-today" aria-hidden="true"><i></i></span>
+          <span>今日</span>
+        </span>
+        <span class="tab-item" data-goto="record">
+          <span class="tab-icon icon-record" aria-hidden="true"><i></i></span>
+          <span>记录</span>
+        </span>
+        <span class="tab-item" data-goto="resonance">
+          <span class="tab-icon icon-resonance" aria-hidden="true"><i></i></span>
+          <span>共鸣</span>
+        </span>
+      </nav>
+
     </div>
+  </main>
 
-    <script src="./script.js?v=20260620b"></script>
-  </body>
+  <!-- ====== 关于弹层 ====== -->
+  <div class="about-modal" id="aboutModal" hidden>
+    <div class="about-modal-card">
+      <h3>关于 CycleBubble</h3>
+      <p>CycleBubble 是一个属于你的情绪空间。你在这里写下的每一刻，都会被 Bubble 温柔地收下。</p>
+      <p>Bubble 不会评价你，不会给你打分，不会催促你记录。它只是慢慢成长，慢慢记住，慢慢陪伴。</p>
+      <p>这不是诊断工具。如果情绪长期困扰你，建议咨询专业人士。</p>
+      <button class="about-close" type="button" id="aboutClose">知道了</button>
+    </div>
+  </div>
+
+  <script src="./script.js?v=20260706c"></script>
+</body>
 </html>
