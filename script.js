@@ -70,11 +70,11 @@
       aiProcessing.hidden = false;
 
       // 2 秒后跳转到 AI 理解结果页
-      bubbleRecorded();
+      bubbleMorphRecorded();
       setTimeout(function () {
         switchTo("insight");
-        // AI 分析完成，Bubble 增加光泽
-        setTimeout(bubbleAnalyzed, 600);
+        // AI 分析完成，Bubble morph 变化
+        setTimeout(bubbleMorphAnalyzed, 600);
         // 重置记录页，方便再次体验
         setTimeout(function () {
           saveBtn.style.display = "";
@@ -177,23 +177,61 @@
     lightPoints.appendChild(point);
   }
 
-  // 记录完成后，Bubble 微微变化（增加一点光泽）
-  function bubbleRecorded() {
-    if (!mainBubble) return;
-    mainBubble.style.filter = "brightness(1.06) saturate(1.05)";
+  // 漂浮粒子 — 让 Bubble 持续"活着"
+  var floatingParticles = document.getElementById("floatingParticles");
+  function spawnParticle() {
+    if (!floatingParticles) return;
+    var p = document.createElement("span");
+    p.className = "particle";
+    var size = 2 + Math.random() * 3;
+    p.style.width = size + "px";
+    p.style.height = size + "px";
+    p.style.left = (10 + Math.random() * 80) + "%";
+    p.style.bottom = (5 + Math.random() * 50) + "%";
+    var duration = 4 + Math.random() * 6;
+    p.style.animationDuration = duration + "s";
+    p.style.animationDelay = (Math.random() * 2) + "s";
+    p.style.opacity = "0";
+    floatingParticles.appendChild(p);
+    // 动画结束后移除
     setTimeout(function () {
-      mainBubble.style.filter = "";
-    }, 1200);
+      if (p.parentNode) p.parentNode.removeChild(p);
+    }, (duration + 3) * 1000);
   }
 
-  // AI 分析完成，Bubble 增加光泽
-  function bubbleAnalyzed() {
-    if (!mainBubble) return;
-    mainBubble.style.filter = "brightness(1.08) saturate(1.08)";
-    addLightPoint("connection");
+  // 每 2-4 秒生成一个粒子
+  function startParticles() {
+    spawnParticle();
+    var interval = 2000 + Math.random() * 2000;
     setTimeout(function () {
-      mainBubble.style.filter = "";
-    }, 1800);
+      startParticles();
+    }, interval);
+  }
+  startParticles();
+
+  // Bubble morph — 记录后液面变化
+  function bubbleMorphRecorded() {
+    var liquid = document.getElementById("bubbleLiquid");
+    if (liquid) {
+      liquid.style.height = "72%";
+      setTimeout(function () {
+        liquid.style.height = "";
+      }, 1500);
+    }
+  }
+
+  // Bubble morph — 分析后液面+色彩微变
+  function bubbleMorphAnalyzed() {
+    var liquid = document.getElementById("bubbleLiquid");
+    if (liquid) {
+      liquid.style.height = "75%";
+      liquid.style.background = "linear-gradient(180deg, #f2c3c7 0%, #e8a3a7 30%, #d4a5cf 55%, #c8b8e0 80%, #b8b8de 100%)";
+      addLightPoint("connection");
+      setTimeout(function () {
+        liquid.style.height = "";
+        liquid.style.background = "";
+      }, 2000);
+    }
   }
 
   // ====== 泡泡水流动画 — 实时更新 SVG path ======
