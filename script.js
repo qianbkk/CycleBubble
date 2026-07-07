@@ -156,6 +156,8 @@
   }
 
   // ====== 预置 Memory（模拟过去三个月的沉积） ======
+  // 仅用于 demo 展示效果。用户点击"重新开始"后，isSeeded 标记清除，
+  // 变成真正的空状态，体验首次使用流程。
   var seedMemories = [
     extractMemory("今天又因为领导的一句话纠结了一整天。我是不是太敏感了？", "三个月前"),
     extractMemory("和朋友聊了之后好多了。原来不只是我一个人这样。", "两个月前"),
@@ -164,10 +166,19 @@
     extractMemory("这个阶段又到了，提前做好了心理准备。没有像上次那样陷入很久。", "两周前")
   ];
 
-  // 如果是首次访问（memories 为空），注入种子记忆
-  if (bubbleDNA.memories.length === 0) {
+  // 首次访问（无任何存储）：注入种子记忆用于 demo 展示
+  // isSeeded 标记区分"demo 种子"和"用户真实记录"
+  var isSeeded = false;
+  try {
+    isSeeded = localStorage.getItem("bubbleSeeded_v6") === "true";
+  } catch (e) {}
+
+  if (bubbleDNA.memories.length === 0 && !isSeeded) {
+    // 全新设备首次打开：注入种子记忆
     bubbleDNA.memories = seedMemories.slice();
     bubbleDNA.totalRecords = seedMemories.length;
+    isSeeded = true;
+    try { localStorage.setItem("bubbleSeeded_v6", "true"); } catch (e) {}
   }
 
   // ====== Pattern 聚合层 ======
@@ -380,6 +391,9 @@
     var p = getPatterns();
     var richness = p.themeCount + p.recoveryCount;
 
+    if (p.totalMemories === 0) {
+      return "Bubble 还在等你";
+    }
     if (richness >= 5 && bubbleDNA.totalResponses >= 2) {
       return "Bubble 好像越来越懂你了";
     }
@@ -393,6 +407,9 @@
     var p = getPatterns();
     var richness = p.themeCount + p.recoveryCount;
 
+    if (p.totalMemories === 0) {
+      return "Bubble 还在等你写下第一句话";
+    }
     if (richness >= 5 && bubbleDNA.totalResponses >= 2) {
       return "Bubble 想和你分享一些最近才发现的变化";
     }
@@ -406,6 +423,9 @@
     var p = getPatterns();
     var richness = p.themeCount + p.recoveryCount;
 
+    if (p.totalMemories === 0) {
+      return "每一段表达，都会成为 Bubble 理解你的开始。";
+    }
     if (richness >= 5) {
       return "这些变化不是结论，只是一种观察。你自己觉得呢？";
     }
@@ -534,14 +554,14 @@
 
     // 2. Pattern：一个轻轻的观察（只说一个，不解释）
     var topTheme = getTopPattern(p.themes, 2);
-    if (topTheme && topTheme.count >= 2) {
+    if (p.totalMemories <= 1) {
+      // 第一条记录：不找模式，只说收下了
+      html += '<section class="insight-pattern">';
+      html += '<p class="pattern-text">这是你留给 Bubble 的第一段话。</p>';
+      html += '</section>';
+    } else if (topTheme && topTheme.count >= 2) {
       html += '<section class="insight-pattern">';
       html += '<p class="pattern-text">这些记录里，「' + topTheme.name + '」反复出现了 ' + topTheme.count + ' 次。</p>';
-      html += '</section>';
-    } else if (latest && latest.themes.length > 0) {
-      // 只有一条，不强行找模式，轻轻提一下
-      html += '<section class="insight-pattern">';
-      html += '<p class="pattern-text">Bubble 把它收下了。</p>';
       html += '</section>';
     } else {
       html += '<section class="insight-pattern">';
@@ -936,15 +956,15 @@
     if (e.target === aboutModal) aboutModal.hidden = true;
   });
 
-  // 重新开始：清除数据，重新注入种子记忆，回到首页
+  // 重新开始：清除所有数据（含种子标记），变成真正的空状态
   var aboutReset = document.getElementById("aboutReset");
   if (aboutReset) {
     aboutReset.addEventListener("click", function () {
       try {
         localStorage.removeItem("bubbleDNA_v6");
+        localStorage.removeItem("bubbleSeeded_v6");
       } catch (e) {}
       aboutModal.hidden = true;
-      // 延迟刷新，让弹层先关闭
       setTimeout(function () {
         window.location.reload();
       }, 200);
