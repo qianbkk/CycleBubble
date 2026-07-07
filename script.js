@@ -542,6 +542,18 @@
     if (narration) {
       narration.textContent = getGrowthNarration();
     }
+
+    // 回应页卡片顶部色温 = 主 Bubble 情绪基调
+    var resonanceCards = document.querySelectorAll(".resonance-card");
+    for (var rc = 0; rc < resonanceCards.length; rc++) {
+      // 顶部弧形光感用情绪色温
+      var topGradient = "linear-gradient(90deg, transparent 0%, hsla(" + st.moodHue + ",45%,70%,.5) 20%, hsla(" + st.moodHue + ",50%,72%,.45) 50%, hsla(" + st.moodHue + ",45%,70%,.5) 80%, transparent 100%)";
+      // 背景顶部加情绪色光斑
+      var bgColor = "radial-gradient(ellipse at 30% 0%, hsla(" + st.moodHue + ",40%,80%,.35), transparent 50%), radial-gradient(ellipse at 70% 100%, rgba(240,237,247,.4), transparent 50%), linear-gradient(180deg, rgba(255,253,251,.99), rgba(248,244,250,.9))";
+      resonanceCards[rc].style.background = bgColor;
+      // 用 CSS 变量传递顶部色温（::before 无法直接设 style，用 inline CSS 变量）
+      resonanceCards[rc].style.setProperty("--mood-hue", st.moodHue);
+    }
   }
 
   applyBubbleState();

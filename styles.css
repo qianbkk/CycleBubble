@@ -877,16 +877,16 @@ textarea::placeholder { color: var(--subtle); }
 /* ====== 共鸣页 ====== */
 .resonance-stack {
   position: relative;
-  min-height: 240px;
+  min-height: 480px;
   margin-bottom: 12px;
 }
 
 .resonance-card {
   position: absolute;
   inset: 0;
-  padding: 28px 22px 22px;
+  padding: 32px 24px 24px;
   border: 1.5px solid rgba(181,169,207,.25);
-  border-radius: 36px 36px 32px 32px;
+  border-radius: 40px 40px 36px 36px;
   background:
     radial-gradient(ellipse at 30% 0%, rgba(245,217,216,.35), transparent 50%),
     radial-gradient(ellipse at 70% 100%, rgba(240,237,247,.4), transparent 50%),
@@ -902,7 +902,7 @@ textarea::placeholder { color: var(--subtle); }
   overflow: hidden;
 }
 
-/* 泡泡顶部弧形液体光感——明显的弧形高光 */
+/* 泡泡顶部弧形液体光感——颜色跟随主 Bubble 情绪色温 */
 .resonance-card::before {
   content: "";
   position: absolute;
@@ -912,9 +912,9 @@ textarea::placeholder { color: var(--subtle); }
   height: 6px;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(181,169,207,.5) 20%,
-    rgba(232,163,167,.45) 50%,
-    rgba(181,169,207,.5) 80%,
+    hsla(var(--mood-hue, 275), 45%, 70%, .5) 20%,
+    hsla(var(--mood-hue, 275), 50%, 72%, .45) 50%,
+    hsla(var(--mood-hue, 275), 45%, 70%, .5) 80%,
     transparent 100%);
   border-radius: 0 0 50% 50% / 0 0 100% 100%;
   box-shadow: 0 1px 2px rgba(232,163,167,.15);
