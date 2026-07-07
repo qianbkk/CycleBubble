@@ -287,6 +287,18 @@
   }
 
   // ====== 成长故事（展示原话，让用户自己看见变化，不由 Bubble 宣布） ======
+  function dedupeMemories(arr) {
+    var seen = {};
+    var result = [];
+    for (var i = 0; i < arr.length; i++) {
+      if (!seen[arr[i].id]) {
+        seen[arr[i].id] = true;
+        result.push(arr[i]);
+      }
+    }
+    return result;
+  }
+
   function generateGrowthStories() {
     var p = getPatterns();
     var stories = [];
@@ -296,24 +308,30 @@
       return stories;
     }
 
-    // 表达方式：把不同时期的原话放在一起，让用户自己看到差异（至少 2 条）
+    // 表达方式：把不同时期的原话放在一起，让用户自己看到差异（至少 2 条不同记忆）
     var selfMemories = findMemoriesByTheme("自我");
     var expressMemories = findMemoriesByTheme("表达");
-    var allExpress = selfMemories.concat(expressMemories);
+    // concat 后按 id 去重
+    var allExpress = dedupeMemories(selfMemories.concat(expressMemories));
     if (allExpress.length >= 2) {
-      var quotes = [];
-      quotes.push({ time: allExpress[0].timeLabel, text: allExpress[0].snippet });
-      quotes.push({ time: allExpress[allExpress.length - 1].timeLabel, text: allExpress[allExpress.length - 1].snippet });
-      stories.push({
-        text: "这两段话，是不同时期留下的。",
-        tag: "表达方式",
-        evidence: allExpress,
-        quotes: quotes
-      });
+      var first = allExpress[0];
+      var last = allExpress[allExpress.length - 1];
+      // 确保最早和最近不是同一条
+      if (first.id !== last.id) {
+        var quotes = [];
+        quotes.push({ time: first.timeLabel, text: first.snippet });
+        quotes.push({ time: last.timeLabel, text: last.snippet });
+        stories.push({
+          text: "这两段话，是不同时期留下的。",
+          tag: "表达方式",
+          evidence: allExpress,
+          quotes: quotes
+        });
+      }
     }
 
     // 恢复方式：至少 2 条才展示
-    var recoveryMemories = findMemoriesByRecovery();
+    var recoveryMemories = dedupeMemories(findMemoriesByRecovery());
     if (recoveryMemories.length >= 2) {
       var recoveryQuotes = recoveryMemories.slice(-2).map(function(m) {
         return { time: m.timeLabel, text: m.snippet };
@@ -337,7 +355,7 @@
     }
 
     // 周期觉察：至少 2 条才展示
-    var cycleMemories = findMemoriesByTheme("身体");
+    var cycleMemories = dedupeMemories(findMemoriesByTheme("身体"));
     if (cycleMemories.length >= 2) {
       var cycleQuotes = cycleMemories.slice(-2).map(function(m) {
         return { time: m.timeLabel, text: m.snippet };
