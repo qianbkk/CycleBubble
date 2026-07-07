@@ -511,7 +511,66 @@
 
   applyBubbleState();
 
-  // ====== 成长页渲染（基于 Pattern + 证据） ======
+  // ====== 理解页渲染（Evidence → Pattern → Reflection，动态引用用户原话） ======
+  var growthStoryIndex = 0;
+
+  function renderInsightPage() {
+    var body = document.getElementById("insightBody");
+    if (!body) return;
+
+    var memories = bubbleDNA.memories;
+    var latest = memories.length > 0 ? memories[memories.length - 1] : null;
+    var p = getPatterns();
+
+    var html = '';
+
+    // 1. Evidence：用户刚写的话（原样奉还，不评价）
+    if (latest) {
+      html += '<section class="insight-evidence">';
+      html += '<p class="evidence-label">你刚刚写下的</p>';
+      html += '<p class="evidence-text">' + latest.snippet + '</p>';
+      html += '</section>';
+    }
+
+    // 2. Pattern：一个轻轻的观察（只说一个，不解释）
+    var topTheme = getTopPattern(p.themes, 2);
+    if (topTheme && topTheme.count >= 2) {
+      html += '<section class="insight-pattern">';
+      html += '<p class="pattern-text">这些记录里，「' + topTheme.name + '」反复出现了 ' + topTheme.count + ' 次。</p>';
+      html += '</section>';
+    } else if (latest && latest.themes.length > 0) {
+      // 只有一条，不强行找模式，轻轻提一下
+      html += '<section class="insight-pattern">';
+      html += '<p class="pattern-text">Bubble 把它收下了。</p>';
+      html += '</section>';
+    } else {
+      html += '<section class="insight-pattern">';
+      html += '<p class="pattern-text">Bubble 把它收下了。</p>';
+      html += '</section>';
+    }
+
+    // 3. Reflection：留白（一句话，不解释）
+    html += '<section class="insight-space">';
+    html += '<p class="space-text">你自己觉得呢？</p>';
+    html += '</section>';
+
+    // 按钮
+    html += '<div class="action-stack" style="padding:0; margin-top:24px;">';
+    html += '<button class="primary-action" type="button" data-goto="growth">看看 Bubble 记住了什么</button>';
+    html += '</div>';
+
+    body.innerHTML = html;
+
+    // 重新绑定按钮
+    var btn = body.querySelector('[data-goto="growth"]');
+    if (btn) {
+      btn.addEventListener("click", function () {
+        switchTo("growth");
+      });
+    }
+  }
+
+  // ====== 成长页渲染（一次一个发现，像翻书） ======
   function renderGrowthPage() {
     var headline = document.getElementById("growthHeadline");
     if (headline) headline.textContent = getGrowthHeadline();
@@ -547,30 +606,13 @@
       timeline.innerHTML = html;
     }
 
-    // 成长故事（展示原话引用，让用户自己看见变化）
+    // 成长故事（一次只展示一个发现，像翻书）
     var storiesEl = document.getElementById("growthStories");
     if (storiesEl) {
       var stories = generateGrowthStories();
-      var sHtml = "";
-      for (var j = 0; j < stories.length; j++) {
-        var s = stories[j];
-        sHtml += '<div class="growth-story-card">';
-        sHtml += '<span class="growth-story-tag">' + s.tag + '</span>';
-        sHtml += '<p class="growth-story-text">' + s.text + '</p>';
-        // 展示用户原话引用（证据可见化）
-        if (s.quotes && s.quotes.length > 0) {
-          sHtml += '<div class="growth-story-quotes">';
-          for (var q = 0; q < s.quotes.length; q++) {
-            sHtml += '<div class="story-quote">';
-            sHtml += '<span class="quote-time">' + s.quotes[q].time + '</span>';
-            sHtml += '<p class="quote-text">' + s.quotes[q].text + '</p>';
-            sHtml += '</div>';
-          }
-          sHtml += '</div>';
-        }
-        sHtml += '</div>';
-      }
-      storiesEl.innerHTML = sHtml;
+      // 重置到第一个发现
+      growthStoryIndex = 0;
+      renderOneGrowthStory(storiesEl, stories);
     }
 
     // 影响卡片（动态）
@@ -578,6 +620,46 @@
     if (impactText && bubbleDNA.totalResponses > 0) {
       var count = 3 + bubbleDNA.totalResponses;
       impactText.innerHTML = "你的经历，陪伴了 <strong>" + count + " 位</strong>正在经历相似感受的人。";
+    }
+  }
+
+  function renderOneGrowthStory(container, stories) {
+    if (!container || stories.length === 0) return;
+    var idx = Math.min(growthStoryIndex, stories.length - 1);
+    var s = stories[idx];
+    var html = '';
+    html += '<div class="growth-story-card growth-story-card--single">';
+    html += '<span class="growth-story-tag">' + s.tag + '</span>';
+    html += '<p class="growth-story-text">' + s.text + '</p>';
+    // 展示用户原话引用
+    if (s.quotes && s.quotes.length > 0) {
+      html += '<div class="growth-story-quotes">';
+      for (var q = 0; q < s.quotes.length; q++) {
+        html += '<div class="story-quote">';
+        html += '<span class="quote-time">' + s.quotes[q].time + '</span>';
+        html += '<p class="quote-text">' + s.quotes[q].text + '</p>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // 如果还有更多发现，显示一个轻轻的提示
+    if (idx < stories.length - 1) {
+      html += '<button class="story-next-hint" type="button">';
+      html += '还有一个发现';
+      html += '</button>';
+    }
+
+    container.innerHTML = html;
+
+    // 绑定"还有一个发现"
+    var nextBtn = container.querySelector('.story-next-hint');
+    if (nextBtn) {
+      nextBtn.addEventListener("click", function () {
+        growthStoryIndex++;
+        renderOneGrowthStory(container, stories);
+      });
     }
   }
 
@@ -597,6 +679,7 @@
     if (at) at.classList.add("active");
 
     if (name === "home") applyBubbleState();
+    if (name === "insight") renderInsightPage();
     if (name === "growth") renderGrowthPage();
   }
 

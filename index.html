@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CycleBubble</title>
   <meta name="description" content="CycleBubble — 一个持续理解你的情绪空间。">
-  <link rel="stylesheet" href="./styles.css?v=20260707b">
+  <link rel="stylesheet" href="./styles.css?v=20260707c">
 </head>
 <body>
   <main class="phone-frame" aria-label="CycleBubble">
@@ -94,28 +94,8 @@
           <span class="nav-title">理解</span>
           <span class="nav-spacer"></span>
         </div>
-        <div class="screen-body">
-          <section class="insight-highlight">
-            <p class="highlight-text">Bubble 最近注意到一个有趣的现象。</p>
-          </section>
-          <section class="insight-memory-link">
-            <p class="memory-link-text">最近几次记录里，「被认可」这个词反复出现。</p>
-            <p class="memory-link-sub">它好像一直在你心里，只是以前没有浮上来。</p>
-          </section>
-          <section class="insight-detail">
-            <h3>Bubble 的观察</h3>
-            <p>今天你反复想起领导的一句话。也许真正触动的不是那句话本身，而是「有没有被认可」这件事一直在你心里。</p>
-            <p>被评价时反复回想，是很多女性在黄体期常见的感受——不是因为脆弱，而是身体在这个阶段对变化更敏锐。</p>
-          </section>
-          <section class="insight-growth-note">
-            <p class="growth-note-text">你自己会不会也有这种感觉？</p>
-          </section>
-          <section class="insight-companion-section">
-            <p class="companion-text">"你不需要对每一种感受都找到理由。有时候，身体只是需要你允许它这样。"</p>
-          </section>
-          <div class="action-stack" style="padding:0; margin-top:24px;">
-            <button class="primary-action" type="button" data-goto="growth">看看 Bubble 记住了什么</button>
-          </div>
+        <div class="screen-body" id="insightBody">
+          <!-- JS 动态渲染 -->
         </div>
       </div>
 
@@ -262,6 +242,6 @@
     </div>
   </div>
 
-  <script src="./script.js?v=20260707b"></script>
+  <script src="./script.js?v=20260707c"></script>
 </body>
 </html>
