@@ -291,19 +291,19 @@
     var p = getPatterns();
     var stories = [];
 
-    // 表达方式：把不同时期的原话放在一起，让用户自己看到差异
+    // 记忆太少时，不生成任何"发现"
+    if (p.totalMemories < 2) {
+      return stories;
+    }
+
+    // 表达方式：把不同时期的原话放在一起，让用户自己看到差异（至少 2 条）
     var selfMemories = findMemoriesByTheme("自我");
     var expressMemories = findMemoriesByTheme("表达");
-    if (selfMemories.length >= 1 || expressMemories.length >= 1) {
+    var allExpress = selfMemories.concat(expressMemories);
+    if (allExpress.length >= 2) {
       var quotes = [];
-      // 选取最早一条和最近一条，形成时间对比
-      var allExpress = selfMemories.concat(expressMemories);
-      if (allExpress.length >= 2) {
-        quotes.push({ time: allExpress[0].timeLabel, text: allExpress[0].snippet });
-        quotes.push({ time: allExpress[allExpress.length - 1].timeLabel, text: allExpress[allExpress.length - 1].snippet });
-      } else if (allExpress.length === 1) {
-        quotes.push({ time: allExpress[0].timeLabel, text: allExpress[0].snippet });
-      }
+      quotes.push({ time: allExpress[0].timeLabel, text: allExpress[0].snippet });
+      quotes.push({ time: allExpress[allExpress.length - 1].timeLabel, text: allExpress[allExpress.length - 1].snippet });
       stories.push({
         text: "这两段话，是不同时期留下的。",
         tag: "表达方式",
@@ -312,9 +312,9 @@
       });
     }
 
-    // 恢复方式：展示提到恢复的原话
+    // 恢复方式：至少 2 条才展示
     var recoveryMemories = findMemoriesByRecovery();
-    if (recoveryMemories.length >= 1) {
+    if (recoveryMemories.length >= 2) {
       var recoveryQuotes = recoveryMemories.slice(-2).map(function(m) {
         return { time: m.timeLabel, text: m.snippet };
       });
@@ -336,9 +336,9 @@
       });
     }
 
-    // 周期觉察
+    // 周期觉察：至少 2 条才展示
     var cycleMemories = findMemoriesByTheme("身体");
-    if (cycleMemories.length >= 1) {
+    if (cycleMemories.length >= 2) {
       var cycleQuotes = cycleMemories.slice(-2).map(function(m) {
         return { time: m.timeLabel, text: m.snippet };
       });
@@ -347,16 +347,6 @@
         tag: "身体的节奏",
         evidence: cycleMemories,
         quotes: cycleQuotes
-      });
-    }
-
-    // 如果没有足够 Pattern
-    if (stories.length === 0) {
-      stories.push({
-        text: "Bubble 还在慢慢收集你的表达。",
-        tag: "正在沉淀",
-        evidence: [],
-        quotes: []
       });
     }
 
@@ -645,11 +635,18 @@
 
     // 成长故事（一次只展示一个发现，像翻书）
     var storiesEl = document.getElementById("growthStories");
+    var storiesSection = storiesEl ? storiesEl.closest('.growth-stories-section') : null;
     if (storiesEl) {
       var stories = generateGrowthStories();
-      // 重置到第一个发现
       growthStoryIndex = 0;
-      renderOneGrowthStory(storiesEl, stories);
+      if (stories.length === 0) {
+        // 没有足够记忆做发现，隐藏整个 section
+        storiesEl.innerHTML = '';
+        if (storiesSection) storiesSection.style.display = 'none';
+      } else {
+        if (storiesSection) storiesSection.style.display = '';
+        renderOneGrowthStory(storiesEl, stories);
+      }
     }
 
     // 影响卡片（动态）
