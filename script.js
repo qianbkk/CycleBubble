@@ -1,94 +1,460 @@
 /**
- * CycleBubble v5 — Emotional OS (体验重构版)
- * AI 降低存在感，提高陪伴感。
- * 成长不是目标，而是长期使用后的自然结果。
+ * CycleBubble V6 — Emotional OS (Biology 版)
+ * 核心资产是理解能力，不是成长。
+ * Bubble 是一个随用户经历沉积出独特晶体结构的生命体。
+ * Settling, not Growing.
  */
 (function () {
   "use strict";
 
-  // ====== Bubble DNA（成长模型，不可逆） ======
-  var bubbleDNA = {
-    stability: 35,
-    depth: 28,
-    openness: 18,
-    vitality: 22,
-    memoryLayers: [],
-    responseLayers: [],
-    evolution: "remember",
-    totalRecords: 6,
+  // ====== Bubble Biology 数据模型 ======
+  // DNA 是 Pattern 型，不是数值型。
+  // 后端维护 Memory，不维护成长值。
+
+  var defaultDNA = {
+    // 结构化 Memory 数组（每条记录是一层矿物沉积）
+    memories: [],
+    // Pattern 聚合（从 memories 计算，不直接存储）
+    // patterns 在运行时动态计算，这里只存缓存标记
+    _patternsCache: null,
+    _patternsCacheVersion: 0,
+    // 时间切片（支持跨期对比）
+    timeline: [],
+    // Relationship 维度：用户如何回应别人
+    relationshipSignals: [],
+    // Community 维度：用户与什么内容产生共鸣
+    communitySignals: [],
+    // DNA 变化记录（Evolution）
+    evolution: [],
+    // 统计
+    totalRecords: 0,
     totalResponses: 0
   };
 
+  var bubbleDNA;
   try {
-    var saved = localStorage.getItem("bubbleDNA");
+    var saved = localStorage.getItem("bubbleDNA_v6");
     if (saved) {
       var parsed = JSON.parse(saved);
-      for (var k in parsed) {
-        if (bubbleDNA.hasOwnProperty(k)) bubbleDNA[k] = parsed[k];
-      }
+      bubbleDNA = mergeDNA(defaultDNA, parsed);
+    } else {
+      bubbleDNA = JSON.parse(JSON.stringify(defaultDNA));
     }
-  } catch (e) {}
+  } catch (e) {
+    bubbleDNA = JSON.parse(JSON.stringify(defaultDNA));
+  }
+
+  function mergeDNA(defaults, saved) {
+    var result = JSON.parse(JSON.stringify(defaults));
+    for (var k in saved) {
+      if (saved.hasOwnProperty(k)) result[k] = saved[k];
+    }
+    // 确保数组存在
+    if (!Array.isArray(result.memories)) result.memories = [];
+    if (!Array.isArray(result.timeline)) result.timeline = [];
+    if (!Array.isArray(result.relationshipSignals)) result.relationshipSignals = [];
+    if (!Array.isArray(result.communitySignals)) result.communitySignals = [];
+    if (!Array.isArray(result.evolution)) result.evolution = [];
+    return result;
+  }
 
   function saveDNA() {
-    try { localStorage.setItem("bubbleDNA", JSON.stringify(bubbleDNA)); } catch (e) {}
+    try {
+      bubbleDNA._patternsCacheVersion++;
+      localStorage.setItem("bubbleDNA_v6", JSON.stringify(bubbleDNA));
+    } catch (e) {}
   }
 
-  function updateEvolution() {
-    var s = bubbleDNA.stability + bubbleDNA.depth + bubbleDNA.openness + bubbleDNA.vitality;
-    if (s >= 240) bubbleDNA.evolution = "resonate";
-    else if (s >= 120) bubbleDNA.evolution = "remember";
-    else bubbleDNA.evolution = "reflect";
+  // ====== Memory 结构化抽取 ======
+  // 每条 Bubble 自动抽取结构化字段。
+  // 这是模拟版：真实产品应由 AI Agent 抽取，这里用关键词匹配模拟。
+
+  var themeKeywords = {
+    "认可": ["认可", "肯定", "表扬", "夸", "被看见", "价值", "有没有被", "被需要"],
+    "工作": ["工作", "开会", "领导", "同事", "老板", "项目", "加班", "任务", "报告", "绩效"],
+    "家庭": ["妈妈", "爸爸", "家", "家里", "父母", "弟弟", "姐姐", "哥哥", "家人"],
+    "关系": ["朋友", "他", "她", "伴侣", "恋爱", "分手", "吵架", "冷战", "陪伴"],
+    "自我": ["我是不是", "太敏感", "不够好", "为什么我", "是不是我", "自己"],
+    "身体": ["累", "疲惫", "失眠", "疼", "不舒服", "周期", "生理期", "黄体"],
+    "表达": ["说出来", "表达", "反驳", "没说出口", "想试", "终于说", "开口"]
+  };
+
+  var triggerKeywords = {
+    "评价": ["评价", "批评", "指责", "说了一句", "领导说", "被说"],
+    "比较": ["比别人", "都比我", "别人都", "为什么别人"],
+    "冲突": ["吵架", "争执", "冷战", "冲突", "矛盾"],
+    "变化": ["变了", "突然", "第一次", "没想到"],
+    "周期": ["这个阶段", "又到了", "生理期", "黄体", "激素"]
+  };
+
+  var recoveryKeywords = {
+    "表达": ["说出来", "写下来", "记录", "倾诉", "聊了"],
+    "独处": ["一个人", "安静", "离开一下", "待着", "空间"],
+    "连接": ["朋友", "聊", "陪伴", "分享"],
+    "运动": ["运动", "跑步", "走路", "瑜伽"],
+    "创作": ["画画", "写", "画", "音乐", "创作"]
+  };
+
+  var emotionKeywords = {
+    "焦虑": ["焦虑", "担心", "怕", "紧张", "不安", "反复想", "纠结"],
+    "委屈": ["委屈", "不公平", "凭什么", "为什么我"],
+    "愤怒": ["生气", "气", "愤怒", "烦", "讨厌"],
+    "低落": ["低落", "难过", "哭", "丧", "没力气", "空虚"],
+    "平静": ["平静", "还好", "释然", "接受", "放下"],
+    "温暖": ["温暖", "感动", "开心", "幸福", "感激"],
+    "力量": ["力量", "勇气", "决定", "终于", "突破"]
+  };
+
+  function extractField(text, keywordMap) {
+    var found = [];
+    for (var category in keywordMap) {
+      var words = keywordMap[category];
+      for (var i = 0; i < words.length; i++) {
+        if (text.indexOf(words[i]) !== -1) {
+          if (found.indexOf(category) === -1) found.push(category);
+          break;
+        }
+      }
+    }
+    return found;
   }
 
-  // ====== 预置记忆（模拟过去三个月的成长轨迹） ======
+  function extractMemory(rawText, timeLabel) {
+    var text = rawText || "";
+    var themes = extractField(text, themeKeywords);
+    var triggers = extractField(text, triggerKeywords);
+    var recovery = extractField(text, recoveryKeywords);
+    var emotions = extractField(text, emotionKeywords);
+
+    // 表达方式推断
+    var expressionStyle = "倾诉";
+    if (/[？?]/.test(text) && text.length < 60) expressionStyle = "提问";
+    else if (/我想|我想试|下次|打算|要/.test(text)) expressionStyle = "反思";
+    else if (/终于|决定|突破/.test(text)) expressionStyle = "行动";
+
+    // 是否提到行动
+    var hasAction = /终于|决定|试|开始|下次|打算/.test(text);
+
+    // 情绪基调（取第一个匹配的情绪，或"未明"）
+    var mood = emotions.length > 0 ? emotions[0] : "未明";
+
+    return {
+      id: "m_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+      time: Date.now(),
+      timeLabel: timeLabel || "今天",
+      rawText: text,
+      snippet: text.length > 50 ? text.substring(0, 50) + "……" : text,
+      themes: themes,
+      triggers: triggers,
+      recovery: recovery,
+      emotions: emotions,
+      mood: mood,
+      expressionStyle: expressionStyle,
+      hasAction: hasAction,
+      source: "self"
+    };
+  }
+
+  // ====== 预置 Memory（模拟过去三个月的沉积） ======
   var seedMemories = [
-    { timeLabel: "三个月前", snippet: "今天又因为领导的一句话纠结了一整天。我是不是太敏感了？", theme: "自我怀疑" },
-    { timeLabel: "两个月前", snippet: "和朋友聊了之后好多了。原来不只是我一个人这样。", theme: "连接" },
-    { timeLabel: "六周前", snippet: "开会时又想反驳但没说出口。下次想试着表达出来。", theme: "渴望表达" },
-    { timeLabel: "一个月前", snippet: "今天终于主动说出了自己的想法，虽然说出口时手在抖。", theme: "突破" },
-    { timeLabel: "两周前", snippet: "这个阶段又到了，提前做好了心理准备。没有像上次那样陷入很久。", theme: "觉察" }
+    extractMemory("今天又因为领导的一句话纠结了一整天。我是不是太敏感了？", "三个月前"),
+    extractMemory("和朋友聊了之后好多了。原来不只是我一个人这样。", "两个月前"),
+    extractMemory("开会时又想反驳但没说出口。下次想试着表达出来。", "六周前"),
+    extractMemory("今天终于主动说出了自己的想法，虽然说出口时手在抖。", "一个月前"),
+    extractMemory("这个阶段又到了，提前做好了心理准备。没有像上次那样陷入很久。", "两周前")
   ];
 
-  // ====== 成长故事（观察式，非结论式） ======
-  var growthStories = [
-    { text: "最近几次记录里，好像从「我是不是太敏感」慢慢变成了「我可以试着表达出来」。不知道你自己有没有注意到这个变化？", tag: "表达方式" },
-    { text: "每次和朋友交流之后，你恢复的速度好像都在变快。也许你已经在不知不觉中找到了自己的节奏。", tag: "恢复能力" },
-    { text: "最近你开始回应别人的故事了。从单纯的安慰，到分享自己的经历——这也许意味着你已经有了自己的方式。", tag: "与他人的连接" },
-    { text: "这个阶段又来了，但这次好像比上次更早察觉到了它。也许身体已经开始学会提醒你。", tag: "周期觉察" }
-  ];
+  // 如果是首次访问（memories 为空），注入种子记忆
+  if (bubbleDNA.memories.length === 0) {
+    bubbleDNA.memories = seedMemories.slice();
+    bubbleDNA.totalRecords = seedMemories.length;
+  }
 
-  // ====== 成长旁白系统 ======
+  // ====== Pattern 聚合层 ======
+  // 从 memories 动态计算 Pattern，不存储。
+  // AI 只能调用已存在的 Pattern，不能创造不存在的 Pattern。
+
+  function computePatterns() {
+    var memories = bubbleDNA.memories;
+    var patterns = {
+      themes: {},
+      triggers: {},
+      recovery: {},
+      emotions: {},
+      expressions: {},
+      totalMemories: memories.length,
+      themeCount: 0,
+      recoveryCount: 0,
+      triggerCount: 0,
+      moodDistribution: {},
+      recentMood: "未明",
+      hasRecoveryPattern: false,
+      hasTriggerPattern: false,
+      timelineSpan: 0
+    };
+
+    if (memories.length === 0) return patterns;
+
+    // 聚合各维度
+    for (var i = 0; i < memories.length; i++) {
+      var m = memories[i];
+      addToCount(patterns.themes, m.themes);
+      addToCount(patterns.triggers, m.triggers);
+      addToCount(patterns.recovery, m.recovery);
+      addToCount(patterns.emotions, m.emotions);
+      if (m.expressionStyle) {
+        patterns.expressions[m.expressionStyle] = (patterns.expressions[m.expressionStyle] || 0) + 1;
+      }
+    }
+
+    patterns.themeCount = Object.keys(patterns.themes).length;
+    patterns.recoveryCount = Object.keys(patterns.recovery).length;
+    patterns.triggerCount = Object.keys(patterns.triggers).length;
+
+    // 近期情绪基调（最近 3 条记忆的主导情绪）
+    var recent = memories.slice(-3);
+    var moodTally = {};
+    for (var r = 0; r < recent.length; r++) {
+      if (recent[r].mood && recent[r].mood !== "未明") {
+        moodTally[recent[r].mood] = (moodTally[recent[r].mood] || 0) + 1;
+      }
+    }
+    var topMood = "未明";
+    var topCount = 0;
+    for (var mood in moodTally) {
+      if (moodTally[mood] > topCount) {
+        topMood = mood;
+        topCount = moodTally[mood];
+      }
+    }
+    patterns.recentMood = topMood;
+
+    // 情绪分布
+    for (var e in patterns.emotions) {
+      patterns.moodDistribution[e] = patterns.emotions[e];
+    }
+
+    // 是否有恢复方式 Pattern
+    patterns.hasRecoveryPattern = patterns.recoveryCount >= 2;
+
+    // 是否有触发因素 Pattern
+    patterns.hasTriggerPattern = patterns.triggerCount >= 2;
+
+    // 时间跨度
+    if (memories.length >= 2) {
+      patterns.timelineSpan = memories[memories.length - 1].time - memories[0].time;
+    }
+
+    return patterns;
+  }
+
+  function addToCount(countMap, items) {
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      countMap[items[i]] = (countMap[items[i]] || 0) + 1;
+    }
+  }
+
+  function getPatterns() {
+    if (bubbleDNA._patternsCache && bubbleDNA._patternsCacheVersion === bubbleDNA._patternsCacheVersion_cached) {
+      return bubbleDNA._patternsCache;
+    }
+    var p = computePatterns();
+    bubbleDNA._patternsCache = p;
+    bubbleDNA._patternsCacheVersion_cached = bubbleDNA._patternsCacheVersion;
+    return p;
+  }
+
+  function getTopPattern(patternMap, minCount) {
+    minCount = minCount || 2;
+    var top = null;
+    var topVal = 0;
+    for (var k in patternMap) {
+      if (patternMap[k] > topVal && patternMap[k] >= minCount) {
+        top = k;
+        topVal = patternMap[k];
+      }
+    }
+    return top ? { name: top, count: topVal } : null;
+  }
+
+  // ====== 成长故事（基于 Pattern 动态生成，非静态文案） ======
+  function generateGrowthStories() {
+    var p = getPatterns();
+    var stories = [];
+
+    // 表达方式变化
+    if (p.expressions["行动"] || p.expressions["反思"]) {
+      stories.push({
+        text: "最近几次记录里，好像从「我是不是太敏感」慢慢变成了「我可以试着表达出来」。不知道你自己有没有注意到这个变化？",
+        tag: "表达方式",
+        evidence: findMemoriesByTheme("自我").concat(findMemoriesByTheme("表达"))
+      });
+    }
+
+    // 恢复能力 Pattern
+    if (p.hasRecoveryPattern) {
+      var topRecovery = getTopPattern(p.recovery, 1);
+      var recoveryText = "每次和朋友交流之后，你恢复的速度好像都在变快。也许你已经在不知不觉中找到了自己的节奏。";
+      if (topRecovery && topRecovery.name !== "连接") {
+        var recoveryMap = {
+          "表达": "你好像开始通过表达来恢复自己。",
+          "独处": "你好像找到了属于自己的空间——先离开一下，再回到问题里。",
+          "运动": "运动好像正在成为你恢复的方式之一。",
+          "创作": "创作好像正在成为你安放感受的方式。"
+        };
+        if (recoveryMap[topRecovery.name]) recoveryText = recoveryMap[topRecovery.name];
+      }
+      stories.push({
+        text: recoveryText,
+        tag: "恢复能力",
+        evidence: findMemoriesByRecovery()
+      });
+    }
+
+    // 与他人的连接（Relationship 维度）
+    if (bubbleDNA.totalResponses > 0) {
+      stories.push({
+        text: "最近你开始回应别人的故事了。从单纯的安慰，到分享自己的经历——这也许意味着你已经有了自己的方式。",
+        tag: "与他人的连接",
+        evidence: bubbleDNA.relationshipSignals.slice(-3)
+      });
+    }
+
+    // 周期觉察
+    var cycleMemories = findMemoriesByTheme("身体");
+    if (cycleMemories.length > 0) {
+      stories.push({
+        text: "这个阶段又来了，但这次好像比上次更早察觉到了它。也许身体已经开始学会提醒你。",
+        tag: "周期觉察",
+        evidence: cycleMemories
+      });
+    }
+
+    // 如果没有足够 Pattern，给一个温和的默认
+    if (stories.length === 0) {
+      stories.push({
+        text: "Bubble 还在慢慢收集你的表达。也许再过一段时间，这里会出现一些有趣的变化。",
+        tag: "正在沉淀",
+        evidence: []
+      });
+    }
+
+    return stories;
+  }
+
+  function findMemoriesByTheme(theme) {
+    var result = [];
+    for (var i = 0; i < bubbleDNA.memories.length; i++) {
+      if (bubbleDNA.memories[i].themes.indexOf(theme) !== -1) {
+        result.push(bubbleDNA.memories[i]);
+      }
+    }
+    return result;
+  }
+
+  function findMemoriesByRecovery() {
+    var result = [];
+    for (var i = 0; i < bubbleDNA.memories.length; i++) {
+      if (bubbleDNA.memories[i].recovery.length > 0) {
+        result.push(bubbleDNA.memories[i]);
+      }
+    }
+    return result;
+  }
+
+  // ====== 成长旁白系统（基于 Pattern 丰富度，非数值总分） ======
   function getGrowthNarration() {
-    var s = bubbleDNA.stability + bubbleDNA.depth + bubbleDNA.openness + bubbleDNA.vitality;
-    if (s >= 240) return "Bubble 好像越来越懂你了";
-    if (s >= 120) return "Bubble 开始记住你的节奏了";
+    var p = getPatterns();
+    var richness = p.themeCount + p.recoveryCount;
+
+    if (richness >= 5 && bubbleDNA.totalResponses >= 2) {
+      return "Bubble 好像越来越懂你了";
+    }
+    if (richness >= 3) {
+      return "Bubble 开始记住你的节奏了";
+    }
     return "Bubble 还在慢慢认识你";
   }
 
   function getGrowthHeadline() {
-    var s = bubbleDNA.stability + bubbleDNA.depth + bubbleDNA.openness + bubbleDNA.vitality;
-    if (s >= 240) return "Bubble 想和你分享一些最近才发现的变化";
-    if (s >= 120) return "Bubble 发现了一些也许值得看看的变化";
+    var p = getPatterns();
+    var richness = p.themeCount + p.recoveryCount;
+
+    if (richness >= 5 && bubbleDNA.totalResponses >= 2) {
+      return "Bubble 想和你分享一些最近才发现的变化";
+    }
+    if (richness >= 3) {
+      return "Bubble 发现了一些也许值得看看的变化";
+    }
     return "Bubble 正在慢慢认识你";
   }
 
   function getGrowthSub() {
-    var s = bubbleDNA.stability + bubbleDNA.depth + bubbleDNA.openness + bubbleDNA.vitality;
-    if (s >= 240) return "这些变化不是结论，只是一种观察。你自己觉得呢？";
-    if (s >= 120) return "这些只是 Bubble 的观察，不一定是答案。";
+    var p = getPatterns();
+    var richness = p.themeCount + p.recoveryCount;
+
+    if (richness >= 5) {
+      return "这些变化不是结论，只是一种观察。你自己觉得呢？";
+    }
+    if (richness >= 3) {
+      return "这些只是 Bubble 的观察，不一定是答案。";
+    }
     return "每一次表达，都是 Bubble 理解你的一步。";
   }
 
-  // ====== 由 DNA 计算 Bubble 状态 ======
+  // ====== 由 Pattern 计算 Bubble Biology 状态 ======
+  // 视觉表达理解深度，不表达成长分数。
+  // 液体层次 ← Memory 层数（矿物沉积）
+  // 粒子密度 ← Pattern 丰富度
+  // 色温 ← 近期情绪基调
+  // 呼吸节奏 ← 记录连续性
+
+  var moodColorMap = {
+    "焦虑": { hue: 280, sat: 0.15 },
+    "委屈": { hue: 320, sat: 0.12 },
+    "愤怒": { hue: 0, sat: 0.18 },
+    "低落": { hue: 240, sat: 0.08 },
+    "平静": { hue: 200, sat: 0.06 },
+    "温暖": { hue: 30, sat: 0.14 },
+    "力量": { hue: 45, sat: 0.16 },
+    "未明": { hue: 270, sat: 0.10 }
+  };
+
   function computeBubbleState() {
-    var d = bubbleDNA;
+    var p = getPatterns();
+    var memoryCount = p.totalMemories;
+    var patternRichness = p.themeCount + p.recoveryCount + p.triggerCount;
+
+    // 液体层次：Memory 越多，矿物层越厚
+    var liquidLayers = Math.min(5, Math.floor(memoryCount / 3));
+
+    // 粒子密度：Pattern 越丰富，内部生命越多
+    var particleDensity = 2 + Math.floor(patternRichness / 2);
+
+    // 色温：来自近期情绪基调
+    var moodData = moodColorMap[p.recentMood] || moodColorMap["未明"];
+
+    // 呼吸节奏：记录越多越稳定（越慢）
+    var breatheDuration = Math.max(4.0, 6.0 - memoryCount * 0.15);
+
+    // 液体不透明度：Memory 越多，液体越有质感（越不透明）
+    var opacity = Math.min(0.95, 0.72 + memoryCount * 0.015);
+
+    // 纹理层数：Pattern 丰富度
+    var textureLayers = Math.min(5, Math.floor(patternRichness / 2));
+
     return {
-      breatheDuration: Math.max(3.8, 5.8 - d.stability * 0.02),
-      brightness: 1 + d.vitality * 0.0025,
-      saturation: 1 + d.depth * 0.0015,
-      opacity: Math.max(0.72, 1 - d.openness * 0.003),
-      textureLayers: Math.min(5, Math.floor(d.depth / 20)),
-      particleDensity: 1 + Math.floor(d.vitality / 15)
+      liquidLayers: liquidLayers,
+      particleDensity: particleDensity,
+      moodHue: moodData.hue,
+      moodSat: moodData.sat,
+      breatheDuration: breatheDuration,
+      opacity: opacity,
+      textureLayers: textureLayers,
+      patternRichness: patternRichness,
+      memoryCount: memoryCount,
+      recentMood: p.recentMood
     };
   }
 
@@ -100,7 +466,11 @@
     var narration = document.getElementById("growthNarration");
 
     if (bubble) {
-      bubble.style.filter = "brightness(" + st.brightness.toFixed(3) + ") saturate(" + st.saturation.toFixed(3) + ")";
+      // 色温来自情绪基调，不是"好坏"
+      var filterStr = "brightness(" + (1 + st.moodSat * 0.3).toFixed(3) + ")";
+      filterStr += " saturate(" + (1 + st.moodSat).toFixed(3) + ")";
+      filterStr += " hue-rotate(" + ((st.moodHue - 270) * 0.3).toFixed(1) + "deg)";
+      bubble.style.filter = filterStr;
       bubble.style.animationDuration = st.breatheDuration.toFixed(1) + "s";
     }
     if (liquid) {
@@ -108,11 +478,16 @@
     }
     if (texture) {
       texture.innerHTML = "";
+      // 纹理层 = 矿物沉积，每层有不同的质感和色调
       for (var i = 0; i < st.textureLayers; i++) {
         var layer = document.createElement("span");
+        var layerOpacity = 0.06 + i * 0.02;
+        var xPos = 20 + i * 15;
+        var yPos = 30 + i * 10;
         layer.style.cssText =
-          "position:absolute;inset:0;border-radius:50%;opacity:0.08;pointer-events:none;" +
-          "background:radial-gradient(circle at " + (20 + i * 15) + "% " + (30 + i * 10) + "%, rgba(255,255,255,.6), transparent 40%);";
+          "position:absolute;inset:0;border-radius:50%;opacity:" + layerOpacity + ";pointer-events:none;" +
+          "background:radial-gradient(circle at " + xPos + "% " + yPos + "%, " +
+          "hsla(" + st.moodHue + ", 40%, 70%, .5), transparent 40%);";
         texture.appendChild(layer);
       }
       if (st.textureLayers > 0) texture.classList.add("visible");
@@ -124,7 +499,7 @@
 
   applyBubbleState();
 
-  // ====== 成长页渲染 ======
+  // ====== 成长页渲染（基于 Pattern + 证据） ======
   function renderGrowthPage() {
     var headline = document.getElementById("growthHeadline");
     if (headline) headline.textContent = getGrowthHeadline();
@@ -132,10 +507,12 @@
     var sub = document.getElementById("growthSub");
     if (sub) sub.textContent = getGrowthSub();
 
-    // 记忆时间线
+    var p = getPatterns();
+
+    // 记忆时间线（矿物沉积层）
     var timeline = document.getElementById("memoryTimeline");
     if (timeline) {
-      var allMemories = seedMemories.concat(bubbleDNA.memoryLayers);
+      var allMemories = bubbleDNA.memories;
       var html = "";
       for (var i = allMemories.length - 1; i >= 0; i--) {
         var m = allMemories[i];
@@ -145,7 +522,12 @@
         html += '<div class="memory-content">';
         html += '<span class="memory-time">' + m.timeLabel + '</span>';
         html += '<p class="memory-snippet">' + m.snippet + '</p>';
-        html += '<span class="memory-theme">' + m.theme + '</span>';
+        // 显示主题标签（Pattern 可见化）
+        if (m.themes && m.themes.length > 0) {
+          html += '<span class="memory-theme">' + m.themes[0] + '</span>';
+        } else {
+          html += '<span class="memory-theme">今天的表达</span>';
+        }
         html += '</div>';
         html += '</div>';
         if (i > 0) html += '<span class="memory-line"></span>';
@@ -153,20 +535,29 @@
       timeline.innerHTML = html;
     }
 
-    // 成长故事
+    // 成长故事（动态生成，带证据）
     var storiesEl = document.getElementById("growthStories");
     if (storiesEl) {
+      var stories = generateGrowthStories();
       var sHtml = "";
-      for (var j = 0; j < growthStories.length; j++) {
-        sHtml += '<div class="growth-story-card">';
-        sHtml += '<p class="growth-story-text">' + growthStories[j].text + '</p>';
-        sHtml += '<span class="growth-story-tag">' + growthStories[j].tag + '</span>';
+      for (var j = 0; j < stories.length; j++) {
+        var s = stories[j];
+        sHtml += '<div class="growth-story-card"';
+        if (s.evidence && s.evidence.length > 0) {
+          sHtml += ' data-has-evidence="true"';
+        }
+        sHtml += '>';
+        sHtml += '<p class="growth-story-text">' + s.text + '</p>';
+        sHtml += '<span class="growth-story-tag">' + s.tag + '</span>';
+        if (s.evidence && s.evidence.length > 0) {
+          sHtml += '<span class="growth-story-evidence">' + s.evidence.length + ' 条 Bubble 证据</span>';
+        }
         sHtml += '</div>';
       }
       storiesEl.innerHTML = sHtml;
     }
 
-    // 影响卡片
+    // 影响卡片（动态）
     var impactText = document.querySelector(".impact-text");
     if (impactText && bubbleDNA.totalResponses > 0) {
       var count = 3 + bubbleDNA.totalResponses;
@@ -216,7 +607,7 @@
     });
   }
 
-  // ====== 记录页：放进泡泡 → Bubble 收下今天 → 理解 ======
+  // ====== 记录页：放进泡泡 → 沉淀 → 理解 ======
   var saveBtn = document.getElementById("saveBtn");
   var bubbleSettling = document.getElementById("bubbleSettling");
   var settlingLiquid = document.getElementById("settlingLiquid");
@@ -226,7 +617,7 @@
   var recordHead = document.getElementById("recordHead");
 
   var settlingMessages = [
-    "Bubble 正在把今天收进记忆……",
+    "Bubble 正在把今天收进来……",
     "今天正在慢慢沉淀……",
     "Bubble 正在记住这个瞬间……",
     "今天正在成为理解你的一部分……"
@@ -255,23 +646,23 @@
 
       if (settlingLiquid) settlingLiquid.classList.add("rising");
 
-      // 3 秒后：存入记忆层 → DNA 成长 → 跳转理解页
+      // 3 秒后：结构化抽取 → 存入 Memory → Pattern 更新 → 跳转理解页
       setTimeout(function () {
         clearInterval(msgInterval);
 
-        // 存入记忆层（用户真实的表达）
-        var snippet = userInput.length > 50 ? userInput.substring(0, 50) + "……" : userInput;
-        bubbleDNA.memoryLayers.push({
-          timeLabel: "今天",
-          snippet: snippet,
-          theme: "今天的表达"
+        // 结构化抽取 Memory（一滴水进入 Bubble，形成新的矿物层）
+        var newMemory = extractMemory(userInput, "今天");
+        bubbleDNA.memories.push(newMemory);
+        bubbleDNA.totalRecords++;
+
+        // 记录 DNA Evolution
+        bubbleDNA.evolution.push({
+          type: "memory_added",
+          time: Date.now(),
+          memoryId: newMemory.id,
+          themes: newMemory.themes
         });
 
-        bubbleDNA.totalRecords++;
-        bubbleDNA.stability = Math.min(100, bubbleDNA.stability + 5);
-        bubbleDNA.depth = Math.min(100, bubbleDNA.depth + 3);
-        bubbleDNA.vitality = Math.min(100, bubbleDNA.vitality + 2);
-        updateEvolution();
         saveDNA();
 
         switchTo("insight");
@@ -289,7 +680,7 @@
     });
   }
 
-  // ====== 回应系统（替代原共鸣按钮） ======
+  // ====== 回应系统 ======
   var resonanceCards = document.querySelectorAll(".resonance-card");
   var pageDots = document.querySelectorAll("#pageDots i");
   var currentIndex = 0;
@@ -323,7 +714,7 @@
     lightPoints.appendChild(point);
   }
 
-  // 回应芯片点击
+  // 回应芯片点击（Relationship 维度采集）
   var responseChips = document.querySelectorAll(".response-chip");
   for (var r = 0; r < responseChips.length; r++) {
     responseChips[r].addEventListener("click", function () {
@@ -331,7 +722,6 @@
       var card = this.closest(".resonance-card");
 
       if (responseType === "share") {
-        // 展开/收起经历输入
         var expand = card.querySelector(".response-expand");
         if (expand) {
           expand.hidden = !expand.hidden;
@@ -343,7 +733,6 @@
         return;
       }
 
-      // 其他回应：标记已回应
       var allChips = card.querySelectorAll(".response-chip");
       for (var c = 0; c < allChips.length; c++) {
         allChips[c].disabled = true;
@@ -351,20 +740,23 @@
       this.classList.add("responded");
       this.textContent = "已送出";
 
-      // 记录回应（Relationship 维度）
+      // 记录 Relationship 信号
       bubbleDNA.totalResponses++;
-      bubbleDNA.openness = Math.min(100, bubbleDNA.openness + 3);
-      bubbleDNA.vitality = Math.min(100, bubbleDNA.vitality + 1);
-
-      // 记录回应类型
-      bubbleDNA.responseLayers.push({
+      bubbleDNA.relationshipSignals.push({
         type: responseType,
-        time: Date.now()
+        time: Date.now(),
+        source: "resonance"
+      });
+
+      // 记录 Evolution
+      bubbleDNA.evolution.push({
+        type: "response_given",
+        time: Date.now(),
+        responseType: responseType
       });
 
       saveDNA();
 
-      // 光点反馈
       if (responseType === "empathy") addLightPoint("connection");
       else if (responseType === "hug") addLightPoint("warmth");
       else addLightPoint("connection");
@@ -373,28 +765,33 @@
     });
   }
 
-  // 送出经历
+  // 送出经历（更高权重的 Relationship 信号）
   var responseSends = document.querySelectorAll(".response-send");
   for (var s = 0; s < responseSends.length; s++) {
     responseSends[s].addEventListener("click", function () {
       var card = this.closest(".resonance-card");
       var input = card.querySelector(".response-input");
       if (input && input.value.trim()) {
-        // 记录分享经历（Relationship 维度，更高权重）
         bubbleDNA.totalResponses++;
-        bubbleDNA.openness = Math.min(100, bubbleDNA.openness + 5);
-        bubbleDNA.depth = Math.min(100, bubbleDNA.depth + 2);
-        bubbleDNA.responseLayers.push({
+        var sharedText = input.value.trim().substring(0, 80);
+        bubbleDNA.relationshipSignals.push({
           type: "share",
-          content: input.value.trim().substring(0, 80),
-          time: Date.now()
+          content: sharedText,
+          time: Date.now(),
+          source: "resonance"
         });
+
+        bubbleDNA.evolution.push({
+          type: "experience_shared",
+          time: Date.now(),
+          content: sharedText
+        });
+
         saveDNA();
 
         addLightPoint("warmth");
         addLightPoint("connection");
 
-        // 收起并标记
         var expand = card.querySelector(".response-expand");
         if (expand) expand.hidden = true;
 
@@ -420,7 +817,7 @@
     if (e.target === aboutModal) aboutModal.hidden = true;
   });
 
-  // ====== 漂浮粒子 ======
+  // ====== 漂浮粒子（内部生命） ======
   var floatingParticles = document.getElementById("floatingParticles");
   var settlingParticles = document.getElementById("settlingParticles");
 
@@ -457,7 +854,7 @@
   startParticles(floatingParticles);
   startParticles(settlingParticles);
 
-  // ====== 泡泡水流动画 ======
+  // ====== 泡泡水流动画（液体表面，始终流动） ======
   var waveBack = document.getElementById("waveBack");
   var waveMid = document.getElementById("waveMid");
   var waveFront = document.getElementById("waveFront");
