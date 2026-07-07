@@ -884,11 +884,17 @@ textarea::placeholder { color: var(--subtle); }
 .resonance-card {
   position: absolute;
   inset: 0;
-  padding: 22px 20px;
-  border: none;
-  border-radius: 28px;
-  background: linear-gradient(160deg, rgba(255,253,251,.98), rgba(240,237,247,.6) 60%, rgba(245,217,216,.3));
-  box-shadow: 0 16px 40px rgba(82,63,74,.1), inset 0 1px 0 rgba(255,255,255,.6);
+  padding: 28px 22px 22px;
+  border: 1.5px solid rgba(181,169,207,.25);
+  border-radius: 36px 36px 32px 32px;
+  background:
+    radial-gradient(ellipse at 30% 0%, rgba(245,217,216,.35), transparent 50%),
+    radial-gradient(ellipse at 70% 100%, rgba(240,237,247,.4), transparent 50%),
+    linear-gradient(180deg, rgba(255,253,251,.99), rgba(248,244,250,.9));
+  box-shadow:
+    0 20px 48px rgba(82,63,74,.12),
+    inset 0 2px 0 rgba(255,255,255,.8),
+    inset 0 -2px 8px rgba(181,169,207,.06);
   opacity: 0;
   transform: translateX(40px) scale(.94);
   transition: opacity .45s cubic-bezier(.4,0,.2,1), transform .45s cubic-bezier(.4,0,.2,1);
@@ -896,28 +902,34 @@ textarea::placeholder { color: var(--subtle); }
   overflow: hidden;
 }
 
-/* 泡泡顶部液体光感 */
+/* 泡泡顶部弧形液体光感——明显的弧形高光 */
 .resonance-card::before {
   content: "";
   position: absolute;
   top: 0;
-  left: 15%;
-  right: 15%;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(181,169,207,.4), rgba(232,163,167,.3), transparent);
-  border-radius: 0 0 4px 4px;
+  left: 10%;
+  right: 10%;
+  height: 6px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(181,169,207,.5) 20%,
+    rgba(232,163,167,.45) 50%,
+    rgba(181,169,207,.5) 80%,
+    transparent 100%);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  box-shadow: 0 1px 2px rgba(232,163,167,.15);
 }
 
-/* 泡泡内部柔和光晕 */
+/* 泡泡内部光晕——右上角柔和光斑 */
 .resonance-card::after {
   content: "";
   position: absolute;
-  top: -20px;
-  right: -20px;
-  width: 80px;
-  height: 80px;
+  top: -30px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(245,217,216,.2), transparent 70%);
+  background: radial-gradient(circle, rgba(245,217,216,.25), transparent 65%);
   pointer-events: none;
 }
 
