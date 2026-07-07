@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CycleBubble</title>
   <meta name="description" content="CycleBubble — 一个持续理解你的情绪空间。">
-  <link rel="stylesheet" href="./styles.css?v=20260706e">
+  <link rel="stylesheet" href="./styles.css?v=20260706f">
 </head>
 <body>
   <main class="phone-frame" aria-label="CycleBubble">
@@ -96,19 +96,19 @@
         </div>
         <div class="screen-body">
           <section class="insight-highlight">
-            <p class="highlight-text">你并不是太敏感，而是一直在默默消化别人随口说出的话。</p>
+            <p class="highlight-text">Bubble 最近注意到一个有趣的现象。</p>
           </section>
           <section class="insight-memory-link">
-            <p class="memory-link-text">这是你第三次提到对「被认可」的在意。</p>
-            <p class="memory-link-sub">Bubble 已经记住了这条线索。</p>
+            <p class="memory-link-text">最近几次记录里，「被认可」这个词反复出现。</p>
+            <p class="memory-link-sub">它好像一直在你心里，只是以前没有浮上来。</p>
           </section>
           <section class="insight-detail">
-            <h3>为什么这样说</h3>
-            <p>今天你反复想起领导的一句话。真正触动的不是那句话本身，而是你对"有没有被认可"这件事长期的在意。</p>
+            <h3>Bubble 的观察</h3>
+            <p>今天你反复想起领导的一句话。也许真正触动的不是那句话本身，而是「有没有被认可」这件事一直在你心里。</p>
             <p>被评价时反复回想，是很多女性在黄体期常见的感受——不是因为脆弱，而是身体在这个阶段对变化更敏锐。</p>
           </section>
           <section class="insight-growth-note">
-            <p class="growth-note-text">但这一次，你比上个月更快地察觉到了它。</p>
+            <p class="growth-note-text">你自己会不会也有这种感觉？</p>
           </section>
           <section class="insight-companion-section">
             <p class="companion-text">"你不需要对每一种感受都找到理由。有时候，身体只是需要你允许它这样。"</p>
@@ -128,8 +128,8 @@
         </div>
         <div class="screen-body">
           <section class="growth-headline">
-            <h2 id="growthHeadline">你已经不是三个月前的自己了</h2>
-            <p class="growth-sub" id="growthSub">每一次表达，都在慢慢塑造未来的你。</p>
+            <h2 id="growthHeadline">Bubble 想和你分享一些最近才发现的变化</h2>
+            <p class="growth-sub" id="growthSub">这些变化不是结论，只是一种观察。你自己觉得呢？</p>
           </section>
 
           <section class="memory-section" id="memorySection">
@@ -146,51 +146,77 @@
             </div>
           </section>
 
+          <section class="impact-section" id="impactSection">
+            <h3 class="section-label">你的陪伴</h3>
+            <div class="impact-card">
+              <p class="impact-text">你的经历，陪伴了 <strong>3 位</strong>正在经历相似感受的人。</p>
+              <p class="impact-sub">有人因为你的回应，收藏了一段话。</p>
+            </div>
+          </section>
+
           <section class="resonance-lead">
             <p>今天还有 <strong>42 位</strong>处于相似阶段的女性提到了类似感受。</p>
           </section>
 
           <div class="action-stack" style="padding:0; margin-top:24px;">
-            <button class="primary-action" type="button" data-goto="resonance">你并不孤独</button>
+            <button class="primary-action" type="button" data-goto="resonance">去看看她们的故事</button>
           </div>
         </div>
       </div>
 
-      <!-- ====== 共鸣页 ====== -->
+      <!-- ====== 回应页（原共鸣页） ====== -->
       <div class="screen screen-resonance" data-screen="resonance">
         <div class="nav-bar">
           <button class="back-btn" type="button" data-back="growth">‹</button>
-          <span class="nav-title">共鸣</span>
+          <span class="nav-title">回应</span>
           <span class="nav-spacer"></span>
         </div>
         <div class="screen-body">
           <header class="screen-head">
-            <h2>你并不孤独</h2>
-            <p class="resonance-intro">以下来自同样在成长中的女性，她们走过相似的阶段，找到了自己的方式。</p>
+            <h2>这里的故事</h2>
+            <p class="resonance-intro">以下来自同样在路上的女性。如果你想回应，可以选择一种方式。</p>
           </header>
           <div class="resonance-stack" id="resonanceStack">
             <section class="resonance-card active" data-index="0">
               <p class="anonymous">匿名泡泡 27</p>
               <p class="quote">"我也会在这个阶段把一句话放在心里很久。后来记录了几个月才发现，那不一定是自己变脆弱了，而是当时更需要确认和安静恢复。"</p>
-              <div class="resonance-actions">
-                <button type="button" class="chip-btn empathy-btn">我也有过</button>
-                <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
+              <div class="response-options">
+                <button type="button" class="response-chip" data-response="empathy">我也经历过</button>
+                <button type="button" class="response-chip" data-response="thanks">谢谢你的分享</button>
+                <button type="button" class="response-chip" data-response="hug">抱抱你</button>
+                <button type="button" class="response-chip response-chip--expand" data-response="share">分享我的经历</button>
+              </div>
+              <div class="response-expand" hidden>
+                <textarea class="response-input" placeholder="如果你愿意，可以写一点自己的经历……"></textarea>
+                <button type="button" class="response-send">送出</button>
               </div>
             </section>
             <section class="resonance-card" data-index="1">
               <p class="anonymous">匿名泡泡 41</p>
               <p class="quote">"每次到这个阶段，我都会对别人的语气特别敏感。知道这是周期的一部分后，反而没那么怕了。它总会过去的。"</p>
-              <div class="resonance-actions">
-                <button type="button" class="chip-btn empathy-btn">我也有过</button>
-                <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
+              <div class="response-options">
+                <button type="button" class="response-chip" data-response="empathy">我也经历过</button>
+                <button type="button" class="response-chip" data-response="thanks">谢谢你的分享</button>
+                <button type="button" class="response-chip" data-response="hug">抱抱你</button>
+                <button type="button" class="response-chip response-chip--expand" data-response="share">分享我的经历</button>
+              </div>
+              <div class="response-expand" hidden>
+                <textarea class="response-input" placeholder="如果你愿意，可以写一点自己的经历……"></textarea>
+                <button type="button" class="response-send">送出</button>
               </div>
             </section>
             <section class="resonance-card" data-index="2">
               <p class="anonymous">匿名泡泡 15</p>
               <p class="quote">"以前总觉得是自己太敏感。后来发现，每一次'太敏感'之后，我都学会了一点新的照顾自己的方式。那些方式加在一起，就是成长。"</p>
-              <div class="resonance-actions">
-                <button type="button" class="chip-btn empathy-btn">我也有过</button>
-                <button type="button" class="chip-btn ghost thank-btn">谢谢你</button>
+              <div class="response-options">
+                <button type="button" class="response-chip" data-response="empathy">我也经历过</button>
+                <button type="button" class="response-chip" data-response="thanks">谢谢你的分享</button>
+                <button type="button" class="response-chip" data-response="hug">抱抱你</button>
+                <button type="button" class="response-chip response-chip--expand" data-response="share">分享我的经历</button>
+              </div>
+              <div class="response-expand" hidden>
+                <textarea class="response-input" placeholder="如果你愿意，可以写一点自己的经历……"></textarea>
+                <button type="button" class="response-send">送出</button>
               </div>
             </section>
           </div>
@@ -200,8 +226,8 @@
             </span>
           </div>
           <section class="understanding-card">
-            <h3>你不是一个人在变化</h3>
-            <p>每一个在你之前走过这条路的人，都曾觉得自己太敏感、太脆弱、太不同。但她们都在慢慢找到自己的节奏。你也一样。</p>
+            <h3>你的回应也在陪伴别人</h3>
+            <p>每一次回应，都会成为别人低谷时的一点光。不需要完美，只需要真实。</p>
           </section>
         </div>
       </div>
@@ -218,7 +244,7 @@
         </span>
         <span class="tab-item" data-goto="resonance">
           <span class="tab-icon icon-resonance" aria-hidden="true"><i></i></span>
-          <span>共鸣</span>
+          <span>回应</span>
         </span>
       </nav>
 
@@ -229,13 +255,13 @@
   <div class="about-modal" id="aboutModal" hidden>
     <div class="about-modal-card">
       <h3>关于 CycleBubble</h3>
-      <p>CycleBubble 不是一个日记本，也不是一个情绪记录器。</p>
-      <p>它是一个持续理解你的空间。你在这里写下的每一刻，都会成为未来理解自己的线索。Bubble 会越来越懂你，你也会越来越懂自己。</p>
+      <p>Bubble 不会评价你，不会给你打分，也不会告诉你"你是什么样的人"。</p>
+      <p>它只是慢慢陪你认识自己。你在这里写下的每一刻，都会成为未来理解自己的线索。Bubble 会越来越懂你，你也会越来越懂自己。</p>
       <p>这不是诊断工具。如果情绪长期困扰你，建议咨询专业人士。</p>
       <button class="about-close" type="button" id="aboutClose">知道了</button>
     </div>
   </div>
 
-  <script src="./script.js?v=20260706e"></script>
+  <script src="./script.js?v=20260706f"></script>
 </body>
 </html>

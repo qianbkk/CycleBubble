@@ -742,6 +742,39 @@ textarea::placeholder { color: var(--subtle); }
   border-radius: 999px;
 }
 
+/* ====== 影响卡片 ====== */
+.impact-section {
+  padding: 0 20px 24px;
+}
+
+.impact-card {
+  padding: 18px 20px;
+  border: 1px solid rgba(232,163,167,.22);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255,253,251,.95), rgba(245,217,216,.2));
+  text-align: center;
+  animation: card-in .5s cubic-bezier(.4, 0, .2, 1) both;
+}
+
+.impact-text {
+  margin: 0 0 6px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.impact-text strong {
+  color: var(--rose);
+  font-weight: 700;
+}
+
+.impact-sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--subtle);
+  line-height: 1.5;
+}
+
 /* ====== 共鸣页 ====== */
 .resonance-stack {
   position: relative;
@@ -768,23 +801,99 @@ textarea::placeholder { color: var(--subtle); }
 
 .anonymous { margin: 0 0 10px; color: var(--lavender); font-size: 12px; font-weight: 700; }
 .resonance-card .quote { margin: 0 0 16px; color: var(--ink); font-size: 15px; line-height: 1.8; }
-.resonance-actions { display: flex; gap: 8px; }
 
-.chip-btn {
-  padding: 8px 18px;
-  border: 1px solid var(--coral);
+/* 回应系统 */
+.response-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.response-chip {
+  padding: 7px 14px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  color: var(--coral);
+  color: var(--muted);
   background: var(--surface);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   transition: all .2s;
 }
 
-.chip-btn:hover { background: var(--coral-soft); }
-.chip-btn.ghost { border-color: var(--line); color: var(--muted); }
-.chip-btn.ghost:hover { background: var(--milk); }
-.chip-btn.responded { background: var(--coral); color: #fffdfb; border-color: var(--coral); }
+.response-chip:hover {
+  border-color: var(--lavender);
+  color: var(--lavender);
+  background: var(--lavender-soft);
+}
+
+.response-chip--expand {
+  border-color: rgba(232,163,167,.3);
+  color: var(--rose);
+  background: rgba(245,217,216,.15);
+}
+
+.response-chip--expand:hover {
+  background: rgba(245,217,216,.3);
+  border-color: var(--rose);
+}
+
+.response-chip.responded {
+  background: var(--coral);
+  color: #fffdfb;
+  border-color: var(--coral);
+}
+
+.response-chip:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.response-chip.responded:disabled {
+  opacity: 1;
+}
+
+/* 回应展开输入 */
+.response-expand {
+  margin-top: 12px;
+  animation: card-in .3s ease;
+}
+
+.response-expand[hidden] { display: none; }
+
+.response-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  outline: 0;
+  font-family: inherit;
+}
+
+.response-input:focus {
+  border-color: var(--lavender);
+}
+
+.response-input::placeholder { color: var(--subtle); }
+
+.response-send {
+  margin-top: 8px;
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--coral);
+  color: #fffdfb;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity .15s;
+}
+
+.response-send:hover { opacity: .88; }
 
 .resonance-pager { display: flex; justify-content: center; margin-bottom: 16px; }
 .page-dots { display: flex; gap: 6px; }

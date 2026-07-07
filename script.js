@@ -1,7 +1,7 @@
 /**
- * CycleBubble v4 — Emotional OS
- * 不只是记录情绪，而是持续理解一个人。
- * 每一次表达，都会成为未来理解自己的线索。
+ * CycleBubble v5 — Emotional OS (体验重构版)
+ * AI 降低存在感，提高陪伴感。
+ * 成长不是目标，而是长期使用后的自然结果。
  */
 (function () {
   "use strict";
@@ -13,8 +13,10 @@
     openness: 18,
     vitality: 22,
     memoryLayers: [],
+    responseLayers: [],
     evolution: "remember",
-    totalRecords: 6
+    totalRecords: 6,
+    totalResponses: 0
   };
 
   try {
@@ -47,33 +49,33 @@
     { timeLabel: "两周前", snippet: "这个阶段又到了，提前做好了心理准备。没有像上次那样陷入很久。", theme: "觉察" }
   ];
 
-  // ====== 成长故事（AI 长期观察结果） ======
+  // ====== 成长故事（观察式，非结论式） ======
   var growthStories = [
-    { text: "你发现了吗？最近三个月，你从「我是不是太敏感」变成了「我可以试着表达出来」。", tag: "表达方式" },
-    { text: "每一次和朋友交流之后，你的恢复速度都在加快。", tag: "恢复能力" },
-    { text: "你已经找到了属于自己的恢复方式——先离开一下，再回到问题里。", tag: "自我照顾" },
-    { text: "这个阶段又来了，但你比上次更早察觉到了它。", tag: "周期觉察" }
+    { text: "最近几次记录里，好像从「我是不是太敏感」慢慢变成了「我可以试着表达出来」。不知道你自己有没有注意到这个变化？", tag: "表达方式" },
+    { text: "每次和朋友交流之后，你恢复的速度好像都在变快。也许你已经在不知不觉中找到了自己的节奏。", tag: "恢复能力" },
+    { text: "最近你开始回应别人的故事了。从单纯的安慰，到分享自己的经历——这也许意味着你已经有了自己的方式。", tag: "与他人的连接" },
+    { text: "这个阶段又来了，但这次好像比上次更早察觉到了它。也许身体已经开始学会提醒你。", tag: "周期觉察" }
   ];
 
   // ====== 成长旁白系统 ======
   function getGrowthNarration() {
     var s = bubbleDNA.stability + bubbleDNA.depth + bubbleDNA.openness + bubbleDNA.vitality;
-    if (s >= 240) return "Bubble 越来越懂你了";
+    if (s >= 240) return "Bubble 好像越来越懂你了";
     if (s >= 120) return "Bubble 开始记住你的节奏了";
     return "Bubble 还在慢慢认识你";
   }
 
   function getGrowthHeadline() {
     var s = bubbleDNA.stability + bubbleDNA.depth + bubbleDNA.openness + bubbleDNA.vitality;
-    if (s >= 240) return "你已经不是三个月前的自己了";
-    if (s >= 120) return "你已经在悄悄变化了";
-    return "Bubble 正在认识你";
+    if (s >= 240) return "Bubble 想和你分享一些最近才发现的变化";
+    if (s >= 120) return "Bubble 发现了一些也许值得看看的变化";
+    return "Bubble 正在慢慢认识你";
   }
 
   function getGrowthSub() {
     var s = bubbleDNA.stability + bubbleDNA.depth + bubbleDNA.openness + bubbleDNA.vitality;
-    if (s >= 240) return "每一次表达，都在塑造更完整的你。";
-    if (s >= 120) return "你已经留下了痕迹，它们正在慢慢长出形状。";
+    if (s >= 240) return "这些变化不是结论，只是一种观察。你自己觉得呢？";
+    if (s >= 120) return "这些只是 Bubble 的观察，不一定是答案。";
     return "每一次表达，都是 Bubble 理解你的一步。";
   }
 
@@ -162,6 +164,13 @@
         sHtml += '</div>';
       }
       storiesEl.innerHTML = sHtml;
+    }
+
+    // 影响卡片
+    var impactText = document.querySelector(".impact-text");
+    if (impactText && bubbleDNA.totalResponses > 0) {
+      var count = 3 + bubbleDNA.totalResponses;
+      impactText.innerHTML = "你的经历，陪伴了 <strong>" + count + " 位</strong>正在经历相似感受的人。";
     }
   }
 
@@ -280,7 +289,7 @@
     });
   }
 
-  // ====== 共鸣页 ======
+  // ====== 回应系统（替代原共鸣按钮） ======
   var resonanceCards = document.querySelectorAll(".resonance-card");
   var pageDots = document.querySelectorAll("#pageDots i");
   var currentIndex = 0;
@@ -314,30 +323,89 @@
     lightPoints.appendChild(point);
   }
 
-  var empathyBtns = document.querySelectorAll(".empathy-btn");
-  for (var e = 0; e < empathyBtns.length; e++) {
-    empathyBtns[e].addEventListener("click", function () {
+  // 回应芯片点击
+  var responseChips = document.querySelectorAll(".response-chip");
+  for (var r = 0; r < responseChips.length; r++) {
+    responseChips[r].addEventListener("click", function () {
+      var responseType = this.getAttribute("data-response");
+      var card = this.closest(".resonance-card");
+
+      if (responseType === "share") {
+        // 展开/收起经历输入
+        var expand = card.querySelector(".response-expand");
+        if (expand) {
+          expand.hidden = !expand.hidden;
+          if (!expand.hidden) {
+            var input = expand.querySelector(".response-input");
+            if (input) input.focus();
+          }
+        }
+        return;
+      }
+
+      // 其他回应：标记已回应
+      var allChips = card.querySelectorAll(".response-chip");
+      for (var c = 0; c < allChips.length; c++) {
+        allChips[c].disabled = true;
+      }
       this.classList.add("responded");
-      this.textContent = "已表达";
-      this.disabled = true;
-      addLightPoint("connection");
-      bubbleDNA.openness = Math.min(100, bubbleDNA.openness + 4);
+      this.textContent = "已送出";
+
+      // 记录回应（Relationship 维度）
+      bubbleDNA.totalResponses++;
+      bubbleDNA.openness = Math.min(100, bubbleDNA.openness + 3);
+      bubbleDNA.vitality = Math.min(100, bubbleDNA.vitality + 1);
+
+      // 记录回应类型
+      bubbleDNA.responseLayers.push({
+        type: responseType,
+        time: Date.now()
+      });
+
       saveDNA();
-      setTimeout(nextCard, 1200);
+
+      // 光点反馈
+      if (responseType === "empathy") addLightPoint("connection");
+      else if (responseType === "hug") addLightPoint("warmth");
+      else addLightPoint("connection");
+
+      setTimeout(nextCard, 1500);
     });
   }
 
-  var thankBtns = document.querySelectorAll(".thank-btn");
-  for (var th = 0; th < thankBtns.length; th++) {
-    thankBtns[th].addEventListener("click", function () {
-      this.classList.add("responded");
-      this.textContent = "已感谢";
-      this.disabled = true;
-      addLightPoint("warmth");
-      bubbleDNA.openness = Math.min(100, bubbleDNA.openness + 4);
-      bubbleDNA.vitality = Math.min(100, bubbleDNA.vitality + 1);
-      saveDNA();
-      setTimeout(nextCard, 1200);
+  // 送出经历
+  var responseSends = document.querySelectorAll(".response-send");
+  for (var s = 0; s < responseSends.length; s++) {
+    responseSends[s].addEventListener("click", function () {
+      var card = this.closest(".resonance-card");
+      var input = card.querySelector(".response-input");
+      if (input && input.value.trim()) {
+        // 记录分享经历（Relationship 维度，更高权重）
+        bubbleDNA.totalResponses++;
+        bubbleDNA.openness = Math.min(100, bubbleDNA.openness + 5);
+        bubbleDNA.depth = Math.min(100, bubbleDNA.depth + 2);
+        bubbleDNA.responseLayers.push({
+          type: "share",
+          content: input.value.trim().substring(0, 80),
+          time: Date.now()
+        });
+        saveDNA();
+
+        addLightPoint("warmth");
+        addLightPoint("connection");
+
+        // 收起并标记
+        var expand = card.querySelector(".response-expand");
+        if (expand) expand.hidden = true;
+
+        var allChips = card.querySelectorAll(".response-chip");
+        for (var c = 0; c < allChips.length; c++) {
+          allChips[c].disabled = true;
+        }
+
+        input.value = "";
+        setTimeout(nextCard, 1500);
+      }
     });
   }
 
