@@ -571,6 +571,22 @@
   }
 
   // ====== 成长页渲染（一次一个发现，像翻书） ======
+  function buildMemoryEntry(m, isLatest) {
+    var html = '<div class="memory-entry' + (isLatest ? ' memory-entry--latest' : '') + '">';
+    html += '<span class="memory-dot"></span>';
+    html += '<div class="memory-content">';
+    html += '<span class="memory-time">' + m.timeLabel + '</span>';
+    html += '<p class="memory-snippet">' + m.snippet + '</p>';
+    if (m.themes && m.themes.length > 0) {
+      html += '<span class="memory-theme">' + m.themes[0] + '</span>';
+    } else {
+      html += '<span class="memory-theme">今天的表达</span>';
+    }
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
   function renderGrowthPage() {
     var headline = document.getElementById("growthHeadline");
     if (headline) headline.textContent = getGrowthHeadline();
@@ -580,28 +596,32 @@
 
     var p = getPatterns();
 
-    // 记忆时间线（矿物沉积层）
+    // 记忆时间线（只展示最早和最近，形成时间对比，不列全部）
     var timeline = document.getElementById("memoryTimeline");
     if (timeline) {
       var allMemories = bubbleDNA.memories;
       var html = "";
-      for (var i = allMemories.length - 1; i >= 0; i--) {
-        var m = allMemories[i];
-        var isLatest = (i === allMemories.length - 1);
-        html += '<div class="memory-entry' + (isLatest ? ' memory-entry--latest' : '') + '">';
-        html += '<span class="memory-dot"></span>';
-        html += '<div class="memory-content">';
-        html += '<span class="memory-time">' + m.timeLabel + '</span>';
-        html += '<p class="memory-snippet">' + m.snippet + '</p>';
-        // 显示主题标签（Pattern 可见化）
-        if (m.themes && m.themes.length > 0) {
-          html += '<span class="memory-theme">' + m.themes[0] + '</span>';
-        } else {
-          html += '<span class="memory-theme">今天的表达</span>';
+      if (allMemories.length === 0) {
+        html += '<div class="memory-empty">Bubble 还在等待你的第一次表达。</div>';
+      } else if (allMemories.length <= 2) {
+        // 两条以内，直接展示
+        for (var i = allMemories.length - 1; i >= 0; i--) {
+          var m = allMemories[i];
+          var isLatest = (i === allMemories.length - 1);
+          html += buildMemoryEntry(m, isLatest);
+          if (i > 0) html += '<span class="memory-line"></span>';
         }
-        html += '</div>';
-        html += '</div>';
-        if (i > 0) html += '<span class="memory-line"></span>';
+      } else {
+        // 超过两条：只展示最早和最近，中间省略
+        var earliest = allMemories[0];
+        var latest = allMemories[allMemories.length - 1];
+        var hiddenCount = allMemories.length - 2;
+
+        html += buildMemoryEntry(latest, true);
+        html += '<span class="memory-line"></span>';
+        html += '<div class="memory-gap">还有 ' + hiddenCount + ' 条沉淀</div>';
+        html += '<span class="memory-line"></span>';
+        html += buildMemoryEntry(earliest, false);
       }
       timeline.innerHTML = html;
     }
@@ -915,6 +935,21 @@
   if (aboutModal) aboutModal.addEventListener("click", function (e) {
     if (e.target === aboutModal) aboutModal.hidden = true;
   });
+
+  // 重新开始：清除数据，重新注入种子记忆，回到首页
+  var aboutReset = document.getElementById("aboutReset");
+  if (aboutReset) {
+    aboutReset.addEventListener("click", function () {
+      try {
+        localStorage.removeItem("bubbleDNA_v6");
+      } catch (e) {}
+      aboutModal.hidden = true;
+      // 延迟刷新，让弹层先关闭
+      setTimeout(function () {
+        window.location.reload();
+      }, 200);
+    });
+  }
 
   // ====== 漂浮粒子（内部生命） ======
   var floatingParticles = document.getElementById("floatingParticles");

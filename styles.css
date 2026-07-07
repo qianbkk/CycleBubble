@@ -662,6 +662,22 @@ textarea::placeholder { color: var(--subtle); }
   background: linear-gradient(180deg, rgba(232,163,167,.3), rgba(181,169,207,.15));
 }
 
+.memory-gap {
+  margin-left: 16px;
+  padding: 6px 0;
+  font-size: 11px;
+  color: var(--subtle);
+  letter-spacing: 0.5px;
+}
+
+.memory-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--subtle);
+  line-height: 1.7;
+}
+
 /* 成长故事 */
 .growth-stories-section {
   padding: 0 20px 24px;
@@ -1099,6 +1115,24 @@ button:focus-visible, textarea:focus-visible {
 }
 
 .about-close:hover { opacity: .88; }
+
+.about-reset {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--subtle);
+  font-family: inherit;
+  cursor: pointer;
+  transition: color .2s;
+}
+
+.about-reset:hover {
+  color: var(--lavender);
+}
 
 /* ====== 响应式 ====== */
 @media (max-width: 420px) {
