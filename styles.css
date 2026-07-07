@@ -884,19 +884,45 @@ textarea::placeholder { color: var(--subtle); }
 .resonance-card {
   position: absolute;
   inset: 0;
-  padding: 20px;
-  border: 1px solid rgba(232,163,167,.34);
-  border-radius: 18px;
-  background: rgba(255, 253, 251, .96);
-  box-shadow: 0 16px 38px rgba(82,63,74,.08);
+  padding: 22px 20px;
+  border: none;
+  border-radius: 28px;
+  background: linear-gradient(160deg, rgba(255,253,251,.98), rgba(240,237,247,.6) 60%, rgba(245,217,216,.3));
+  box-shadow: 0 16px 40px rgba(82,63,74,.1), inset 0 1px 0 rgba(255,255,255,.6);
   opacity: 0;
-  transform: translateX(40px) scale(.96);
+  transform: translateX(40px) scale(.94);
   transition: opacity .45s cubic-bezier(.4,0,.2,1), transform .45s cubic-bezier(.4,0,.2,1);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 泡泡顶部液体光感 */
+.resonance-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(181,169,207,.4), rgba(232,163,167,.3), transparent);
+  border-radius: 0 0 4px 4px;
+}
+
+/* 泡泡内部柔和光晕 */
+.resonance-card::after {
+  content: "";
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,217,216,.2), transparent 70%);
   pointer-events: none;
 }
 
 .resonance-card.active { opacity: 1; transform: translateX(0) scale(1); pointer-events: auto; }
-.resonance-card.leaving { opacity: 0; transform: translateX(-40px) scale(.96); }
+.resonance-card.leaving { opacity: 0; transform: translateX(-40px) scale(.94); }
 
 .anonymous { margin: 0 0 10px; color: var(--lavender); font-size: 12px; font-weight: 700; }
 .resonance-card .quote { margin: 0 0 16px; color: var(--ink); font-size: 15px; line-height: 1.8; }
