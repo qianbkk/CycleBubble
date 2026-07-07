@@ -458,14 +458,14 @@
   // 呼吸节奏 ← 记录连续性
 
   var moodColorMap = {
-    "焦虑": { hue: 280, sat: 0.15 },
-    "委屈": { hue: 320, sat: 0.12 },
-    "愤怒": { hue: 0, sat: 0.18 },
-    "低落": { hue: 240, sat: 0.08 },
-    "平静": { hue: 200, sat: 0.06 },
-    "温暖": { hue: 30, sat: 0.14 },
-    "力量": { hue: 45, sat: 0.16 },
-    "未明": { hue: 270, sat: 0.10 }
+    "焦虑": { hue: 265, sat: 0.15 },   // 薰衣草紫
+    "委屈": { hue: 340, sat: 0.14 },   // 玫瑰粉
+    "愤怒": { hue: 10, sat: 0.18 },    // 珊瑚红
+    "低落": { hue: 220, sat: 0.08 },   // 雾蓝
+    "平静": { hue: 180, sat: 0.06 },   // 薄荷青
+    "温暖": { hue: 35, sat: 0.14 },    // 暖橙
+    "力量": { hue: 50, sat: 0.16 },    // 金色
+    "未明": { hue: 275, sat: 0.08 }    // 柔紫（空状态默认）
   };
 
   function computeBubbleState() {
@@ -516,7 +516,7 @@
       // 色温来自情绪基调，不是"好坏"
       var filterStr = "brightness(" + (1 + st.moodSat * 0.3).toFixed(3) + ")";
       filterStr += " saturate(" + (1 + st.moodSat).toFixed(3) + ")";
-      filterStr += " hue-rotate(" + ((st.moodHue - 270) * 0.3).toFixed(1) + "deg)";
+      filterStr += " hue-rotate(" + ((st.moodHue - 275) * 0.6).toFixed(1) + "deg)";
       bubble.style.filter = filterStr;
       bubble.style.animationDuration = st.breatheDuration.toFixed(1) + "s";
     }
