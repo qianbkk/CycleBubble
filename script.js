@@ -278,65 +278,77 @@
     return top ? { name: top, count: topVal } : null;
   }
 
-  // ====== 成长故事（基于 Pattern 动态生成，非静态文案） ======
+  // ====== 成长故事（展示原话，让用户自己看见变化，不由 Bubble 宣布） ======
   function generateGrowthStories() {
     var p = getPatterns();
     var stories = [];
 
-    // 表达方式变化
-    if (p.expressions["行动"] || p.expressions["反思"]) {
-      stories.push({
-        text: "最近几次记录里，好像从「我是不是太敏感」慢慢变成了「我可以试着表达出来」。不知道你自己有没有注意到这个变化？",
-        tag: "表达方式",
-        evidence: findMemoriesByTheme("自我").concat(findMemoriesByTheme("表达"))
-      });
-    }
-
-    // 恢复能力 Pattern
-    if (p.hasRecoveryPattern) {
-      var topRecovery = getTopPattern(p.recovery, 1);
-      var recoveryText = "每次和朋友交流之后，你恢复的速度好像都在变快。也许你已经在不知不觉中找到了自己的节奏。";
-      if (topRecovery && topRecovery.name !== "连接") {
-        var recoveryMap = {
-          "表达": "你好像开始通过表达来恢复自己。",
-          "独处": "你好像找到了属于自己的空间——先离开一下，再回到问题里。",
-          "运动": "运动好像正在成为你恢复的方式之一。",
-          "创作": "创作好像正在成为你安放感受的方式。"
-        };
-        if (recoveryMap[topRecovery.name]) recoveryText = recoveryMap[topRecovery.name];
+    // 表达方式：把不同时期的原话放在一起，让用户自己看到差异
+    var selfMemories = findMemoriesByTheme("自我");
+    var expressMemories = findMemoriesByTheme("表达");
+    if (selfMemories.length >= 1 || expressMemories.length >= 1) {
+      var quotes = [];
+      // 选取最早一条和最近一条，形成时间对比
+      var allExpress = selfMemories.concat(expressMemories);
+      if (allExpress.length >= 2) {
+        quotes.push({ time: allExpress[0].timeLabel, text: allExpress[0].snippet });
+        quotes.push({ time: allExpress[allExpress.length - 1].timeLabel, text: allExpress[allExpress.length - 1].snippet });
+      } else if (allExpress.length === 1) {
+        quotes.push({ time: allExpress[0].timeLabel, text: allExpress[0].snippet });
       }
       stories.push({
-        text: recoveryText,
-        tag: "恢复能力",
-        evidence: findMemoriesByRecovery()
+        text: "这两段话，是不同时期留下的。",
+        tag: "表达方式",
+        evidence: allExpress,
+        quotes: quotes
       });
     }
 
-    // 与他人的连接（Relationship 维度）
+    // 恢复方式：展示提到恢复的原话
+    var recoveryMemories = findMemoriesByRecovery();
+    if (recoveryMemories.length >= 1) {
+      var recoveryQuotes = recoveryMemories.slice(-2).map(function(m) {
+        return { time: m.timeLabel, text: m.snippet };
+      });
+      stories.push({
+        text: "这些记录里，都提到了让自己好起来的方式。",
+        tag: "恢复方式",
+        evidence: recoveryMemories,
+        quotes: recoveryQuotes
+      });
+    }
+
+    // 与他人的连接：展示用户回应过的内容
     if (bubbleDNA.totalResponses > 0) {
       stories.push({
-        text: "最近你开始回应别人的故事了。从单纯的安慰，到分享自己的经历——这也许意味着你已经有了自己的方式。",
+        text: "最近你开始回应别人的故事了。",
         tag: "与他人的连接",
-        evidence: bubbleDNA.relationshipSignals.slice(-3)
+        evidence: bubbleDNA.relationshipSignals.slice(-3),
+        quotes: []
       });
     }
 
     // 周期觉察
     var cycleMemories = findMemoriesByTheme("身体");
-    if (cycleMemories.length > 0) {
+    if (cycleMemories.length >= 1) {
+      var cycleQuotes = cycleMemories.slice(-2).map(function(m) {
+        return { time: m.timeLabel, text: m.snippet };
+      });
       stories.push({
-        text: "这个阶段又来了，但这次好像比上次更早察觉到了它。也许身体已经开始学会提醒你。",
-        tag: "周期觉察",
-        evidence: cycleMemories
+        text: "关于身体的变化，你留下了这些。",
+        tag: "身体的节奏",
+        evidence: cycleMemories,
+        quotes: cycleQuotes
       });
     }
 
-    // 如果没有足够 Pattern，给一个温和的默认
+    // 如果没有足够 Pattern
     if (stories.length === 0) {
       stories.push({
-        text: "Bubble 还在慢慢收集你的表达。也许再过一段时间，这里会出现一些有趣的变化。",
+        text: "Bubble 还在慢慢收集你的表达。",
         tag: "正在沉淀",
-        evidence: []
+        evidence: [],
+        quotes: []
       });
     }
 
@@ -535,22 +547,26 @@
       timeline.innerHTML = html;
     }
 
-    // 成长故事（动态生成，带证据）
+    // 成长故事（展示原话引用，让用户自己看见变化）
     var storiesEl = document.getElementById("growthStories");
     if (storiesEl) {
       var stories = generateGrowthStories();
       var sHtml = "";
       for (var j = 0; j < stories.length; j++) {
         var s = stories[j];
-        sHtml += '<div class="growth-story-card"';
-        if (s.evidence && s.evidence.length > 0) {
-          sHtml += ' data-has-evidence="true"';
-        }
-        sHtml += '>';
-        sHtml += '<p class="growth-story-text">' + s.text + '</p>';
+        sHtml += '<div class="growth-story-card">';
         sHtml += '<span class="growth-story-tag">' + s.tag + '</span>';
-        if (s.evidence && s.evidence.length > 0) {
-          sHtml += '<span class="growth-story-evidence">' + s.evidence.length + ' 条 Bubble 证据</span>';
+        sHtml += '<p class="growth-story-text">' + s.text + '</p>';
+        // 展示用户原话引用（证据可见化）
+        if (s.quotes && s.quotes.length > 0) {
+          sHtml += '<div class="growth-story-quotes">';
+          for (var q = 0; q < s.quotes.length; q++) {
+            sHtml += '<div class="story-quote">';
+            sHtml += '<span class="quote-time">' + s.quotes[q].time + '</span>';
+            sHtml += '<p class="quote-text">' + s.quotes[q].text + '</p>';
+            sHtml += '</div>';
+          }
+          sHtml += '</div>';
         }
         sHtml += '</div>';
       }

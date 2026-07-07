@@ -740,6 +740,35 @@ textarea::placeholder { color: var(--subtle); }
   background: rgba(245,217,216,.3);
   padding: 2px 10px;
   border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.growth-story-quotes {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.story-quote {
+  padding: 10px 12px;
+  border-left: 2px solid rgba(181,169,207,.35);
+  background: rgba(240,237,247,.35);
+  border-radius: 0 8px 8px 0;
+}
+
+.quote-time {
+  font-size: 11px;
+  color: var(--subtle);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.quote-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
 }
 
 /* ====== 影响卡片 ====== */
