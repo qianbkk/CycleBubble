@@ -954,18 +954,26 @@
   });
 
   // 重新开始：清除所有数据，设置重置标记，变成真正的空状态
+  // 挂载到 window 以便内联 onclick 也能调用
+  window.__bubbleReset = function () {
+    try {
+      localStorage.removeItem("bubbleDNA_v6");
+      localStorage.removeItem("bubbleSeeded_v6");
+      localStorage.setItem("bubbleReset_v6", "true");
+    } catch (e) {}
+    var modal = document.getElementById("aboutModal");
+    if (modal) modal.hidden = true;
+    setTimeout(function () {
+      window.location.reload();
+    }, 200);
+  };
+
   var aboutReset = document.getElementById("aboutReset");
   if (aboutReset) {
-    aboutReset.addEventListener("click", function () {
-      try {
-        localStorage.removeItem("bubbleDNA_v6");
-        localStorage.removeItem("bubbleSeeded_v6");
-        localStorage.setItem("bubbleReset_v6", "true");
-      } catch (e) {}
-      aboutModal.hidden = true;
-      setTimeout(function () {
-        window.location.reload();
-      }, 200);
+    aboutReset.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.__bubbleReset();
     });
   }
 
