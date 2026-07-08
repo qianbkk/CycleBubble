@@ -53,8 +53,14 @@
     }
 
     if (res.status === 401) {
-      clearAuth();
-      throw new Error('未登录或登录已过期');
+      // 区分登录态丢失和登录失败：
+      //   - 如果已经有 token → token 过期/被踢
+      //   - 如果没有 token → 当前请求就是登录/注册，密码错
+      var hadToken = !!getToken();
+      if (hadToken) {
+        clearAuth();
+      }
+      throw new Error(hadToken ? '登录已过期，请重新登录' : '账号或密码错误');
     }
 
     var data = null;
