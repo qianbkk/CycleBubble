@@ -31,18 +31,8 @@
     totalResponses: 0
   };
 
-  var bubbleDNA;
-  try {
-    var saved = localStorage.getItem("bubbleDNA_v6");
-    if (saved) {
-      var parsed = JSON.parse(saved);
-      bubbleDNA = mergeDNA(defaultDNA, parsed);
-    } else {
-      bubbleDNA = JSON.parse(JSON.stringify(defaultDNA));
-    }
-  } catch (e) {
-    bubbleDNA = JSON.parse(JSON.stringify(defaultDNA));
-  }
+  var bubbleDNA = JSON.parse(JSON.stringify(defaultDNA));
+  var isAppReady = false; // 数据是否已从 API 加载
 
   function mergeDNA(defaults, saved) {
     var result = JSON.parse(JSON.stringify(defaults));
@@ -59,10 +49,7 @@
   }
 
   function saveDNA() {
-    try {
-      bubbleDNA._patternsCacheVersion++;
-      localStorage.setItem("bubbleDNA_v6", JSON.stringify(bubbleDNA));
-    } catch (e) {}
+    // No-op: 数据由后端 API 管理，不再存 localStorage
   }
 
   // ====== Memory 结构化抽取 ======
@@ -153,29 +140,6 @@
       hasAction: hasAction,
       source: "self"
     };
-  }
-
-  // ====== 预置 Memory（模拟过去三个月的沉积） ======
-  // 仅用于 demo 展示效果。用户点击"重新开始"后，设置 bubbleReset 标记，
-  // 之后永不注入种子记忆，变成真正的空状态。
-  var seedMemories = [
-    extractMemory("今天又因为领导的一句话纠结了一整天。我是不是太敏感了？", "三个月前"),
-    extractMemory("和朋友聊了之后好多了。原来不只是我一个人这样。", "两个月前"),
-    extractMemory("开会时又想反驳但没说出口。下次想试着表达出来。", "六周前"),
-    extractMemory("今天终于主动说出了自己的想法，虽然说出口时手在抖。", "一个月前"),
-    extractMemory("这个阶段又到了，提前做好了心理准备。没有像上次那样陷入很久。", "两周前")
-  ];
-
-  // 用户是否主动重置过
-  var hasReset = false;
-  try {
-    hasReset = localStorage.getItem("bubbleReset_v6") === "true";
-  } catch (e) {}
-
-  // 仅当：没有记忆 + 用户没重置过 → 注入种子记忆（demo 展示用）
-  if (bubbleDNA.memories.length === 0 && !hasReset) {
-    bubbleDNA.memories = seedMemories.slice();
-    bubbleDNA.totalRecords = seedMemories.length;
   }
 
   // ====== Pattern 聚合层 ======
@@ -506,11 +470,25 @@
   }
 
   function applyBubbleState() {
+    var p = getPatterns();
     var st = computeBubbleState();
     var bubble = document.getElementById("mainBubble");
+    var bubbleEmpty = document.getElementById("bubbleEmpty");
     var liquid = document.getElementById("bubbleLiquid");
     var texture = document.getElementById("bubbleTexture");
     var narration = document.getElementById("growthNarration");
+
+    // 无记录：显示空状态，隐藏 Bubble
+    if (p.totalMemories === 0) {
+      if (bubble) bubble.hidden = true;
+      if (bubbleEmpty) bubbleEmpty.hidden = false;
+      if (narration) narration.textContent = "";
+      return;
+    }
+
+    // 有记录：显示 Bubble，隐藏空状态
+    if (bubble) bubble.hidden = false;
+    if (bubbleEmpty) bubbleEmpty.hidden = true;
 
     if (bubble) {
       // 色温来自情绪基调，不是"好坏"
@@ -555,8 +533,6 @@
       resonanceCards[rc].style.setProperty("--mood-hue", st.moodHue);
     }
   }
-
-  applyBubbleState();
 
   // ====== 理解页渲染（Evidence → Pattern → Reflection，动态引用用户原话） ======
   var growthStoryIndex = 0;
@@ -635,13 +611,27 @@
   }
 
   function renderGrowthPage() {
-    var headline = document.getElementById("growthHeadline");
-    if (headline) headline.textContent = getGrowthHeadline();
-
-    var sub = document.getElementById("growthSub");
-    if (sub) sub.textContent = getGrowthSub();
-
     var p = getPatterns();
+    var headline = document.getElementById("growthHeadline");
+    var sub = document.getElementById("growthSub");
+    var memorySection = document.getElementById("memorySection");
+    var storiesSection = document.getElementById("growthStoriesSection");
+
+    // 无数据：完整空状态
+    if (p.totalMemories === 0) {
+      if (headline) headline.textContent = "暂无成长数据";
+      if (sub) sub.textContent = "继续记录，你会逐渐发现自己的长期模式。";
+      if (memorySection) memorySection.style.display = "none";
+      if (storiesSection) storiesSection.style.display = "none";
+      var impactSec = document.getElementById("impactSection");
+      if (impactSec) impactSec.hidden = true;
+      return;
+    }
+
+    // 有数据：正常渲染
+    if (headline) headline.textContent = getGrowthHeadline();
+    if (sub) sub.textContent = getGrowthSub();
+    if (memorySection) memorySection.style.display = "";
 
     // 记忆时间线（只展示最早和最近，形成时间对比，不列全部）
     var timeline = document.getElementById("memoryTimeline");
@@ -689,12 +679,26 @@
       }
     }
 
-    // 影响卡片（动态）
-    var impactText = document.querySelector(".impact-text");
-    if (impactText && bubbleDNA.totalResponses > 0) {
-      var count = 3 + bubbleDNA.totalResponses;
-      impactText.innerHTML = "你的经历，陪伴了 <strong>" + count + " 位</strong>正在经历相似感受的人。";
+    // 影响卡片：从 API 获取真实数据
+    var impactSection = document.getElementById('impactSection');
+    var resonanceLead = document.getElementById('resonanceLead');
+    if (impactSection) {
+      CB_API.getGrowth().then(function (data) {
+        var impact = data.impact || {};
+        var accompanied = impact.accompanied_count || 0;
+        if (accompanied > 0) {
+          impactSection.hidden = false;
+          impactSection.innerHTML =
+            '<h3 class="section-label">你的陪伴</h3>' +
+            '<div class="impact-card">' +
+            '<p class="impact-text">你的经历，陪伴了 <strong>' + accompanied + ' 位</strong>正在经历相似感受的人。</p>' +
+            '</div>';
+        } else {
+          impactSection.hidden = true;
+        }
+      }).catch(function () { impactSection.hidden = true; });
     }
+    if (resonanceLead) resonanceLead.hidden = true; // 社区统计暂不展示假数据
   }
 
   function renderOneGrowthStory(container, stories) {
@@ -759,6 +763,7 @@
     if (name === "home") applyBubbleState();
     if (name === "insight") renderInsightPage();
     if (name === "growth") renderGrowthPage();
+    if (name === "resonance") loadResonanceFeed();
   }
 
   var tabItems = document.querySelectorAll(".tab-item");
@@ -806,7 +811,8 @@
       if (recordInput && recordInput.value.trim()) {
         userInput = recordInput.value.trim();
       } else {
-        userInput = "今天开会时领导说了一句话，我反复想了一整天。好像在意的是自己有没有被认可。";
+        // 没有输入就不处理，不允许假数据
+        return;
       }
 
       saveBtn.style.display = "none";
@@ -823,64 +829,222 @@
 
       if (settlingLiquid) settlingLiquid.classList.add("rising");
 
-      // 3 秒后：结构化抽取 → 存入 Memory → Pattern 更新 → 跳转理解页
+      // 3 秒后：API 抽取 → 存入 Memory → Pattern 更新 → 跳转理解页
       setTimeout(function () {
         clearInterval(msgInterval);
 
-        // 结构化抽取 Memory（一滴水进入 Bubble，形成新的矿物层）
-        var newMemory = extractMemory(userInput, "今天");
-        bubbleDNA.memories.push(newMemory);
-        bubbleDNA.totalRecords++;
+        // 调用后端 API 做结构化抽取
+        CB_API.createMemory(userInput).then(function (result) {
+          var newMemory = result.memory;
+          // 转换为前端兼容格式
+          var mem = {
+            id: newMemory.id,
+            snippet: newMemory.snippet,
+            rawText: newMemory.rawText,
+            timeLabel: newMemory.timeLabel,
+            themes: newMemory.themes,
+            triggers: newMemory.triggers,
+            recovery: newMemory.recovery,
+            emotions: newMemory.emotions,
+            mood: newMemory.mood,
+            expressionStyle: newMemory.expressionStyle,
+            hasAction: newMemory.hasAction,
+            event: newMemory.event
+          };
+          bubbleDNA.memories.push(mem);
+          bubbleDNA.totalRecords++;
 
-        // 记录 DNA Evolution
-        bubbleDNA.evolution.push({
-          type: "memory_added",
-          time: Date.now(),
-          memoryId: newMemory.id,
-          themes: newMemory.themes
+          // 记录 DNA Evolution
+          bubbleDNA.evolution.push({
+            type: "memory_added",
+            time: Date.now(),
+            memoryId: mem.id,
+            themes: mem.themes
+          });
+
+          switchTo("insight");
+          applyBubbleState();
+
+          setTimeout(function () {
+            saveBtn.style.display = "";
+            if (recordInput) recordInput.value = "";
+            if (noteField) noteField.style.display = "";
+            if (recordHead) recordHead.style.display = "";
+            if (bubbleSettling) bubbleSettling.hidden = true;
+            if (settlingLiquid) settlingLiquid.classList.remove("rising");
+          }, 500);
+        }).catch(function (err) {
+          // API 失败：回退到本地抽取
+          console.error("[API] createMemory failed:", err);
+          var newMemory = extractMemory(userInput, "今天");
+          bubbleDNA.memories.push(newMemory);
+          bubbleDNA.totalRecords++;
+          switchTo("insight");
+          applyBubbleState();
+          setTimeout(function () {
+            saveBtn.style.display = "";
+            if (recordInput) recordInput.value = "";
+            if (noteField) noteField.style.display = "";
+            if (recordHead) recordHead.style.display = "";
+            if (bubbleSettling) bubbleSettling.hidden = true;
+            if (settlingLiquid) settlingLiquid.classList.remove("rising");
+          }, 500);
         });
-
-        saveDNA();
-
-        switchTo("insight");
-        applyBubbleState();
-
-        setTimeout(function () {
-          saveBtn.style.display = "";
-          if (recordInput) recordInput.value = "";
-          if (noteField) noteField.style.display = "";
-          if (recordHead) recordHead.style.display = "";
-          if (bubbleSettling) bubbleSettling.hidden = true;
-          if (settlingLiquid) settlingLiquid.classList.remove("rising");
-        }, 500);
       }, 3000);
     });
   }
 
-  // ====== 回应系统 ======
-  var resonanceCards = document.querySelectorAll(".resonance-card");
-  var pageDots = document.querySelectorAll("#pageDots i");
-  var currentIndex = 0;
-  var totalCards = resonanceCards.length;
-
-  function updatePager() {
-    for (var d = 0; d < pageDots.length; d++) pageDots[d].classList.remove("active");
-    if (pageDots[currentIndex]) pageDots[currentIndex].classList.add("active");
-  }
-
-  function nextCard() {
-    if (currentIndex >= totalCards - 1) return;
-    resonanceCards[currentIndex].classList.remove("active");
-    resonanceCards[currentIndex].classList.add("leaving");
-    setTimeout(function () {
-      resonanceCards[currentIndex].classList.remove("leaving");
-      currentIndex++;
-      resonanceCards[currentIndex].classList.add("active");
-      updatePager();
-    }, 450);
-  }
-
+  // ====== 回应系统（从 API 动态加载） ======
+  var resonanceStack = document.getElementById("resonanceStack");
+  var resonancePager = document.querySelector(".resonance-pager");
   var lightPoints = document.getElementById("lightPoints");
+  var resonanceStories = [];
+  var resonanceIndex = 0;
+
+  function renderResonanceCard(story, index) {
+    var isActive = index === 0;
+    var card = document.createElement("section");
+    card.className = "resonance-card" + (isActive ? " active" : "");
+    card.setAttribute("data-index", index);
+    card.setAttribute("data-story-id", story.id || "");
+    card.innerHTML =
+      '<p class="anonymous">' + (story.anon_name || "匿名") + '</p>' +
+      '<p class="quote">"' + (story.snippet || "") + '"</p>' +
+      '<div class="response-options">' +
+        '<button type="button" class="response-chip" data-response="empathy">我也经历过</button>' +
+        '<button type="button" class="response-chip" data-response="thanks">谢谢你的分享</button>' +
+        '<button type="button" class="response-chip" data-response="hug">抱抱你</button>' +
+        '<button type="button" class="response-chip response-chip--expand" data-response="share">分享我的经历</button>' +
+      '</div>' +
+      '<div class="response-expand" hidden>' +
+        '<textarea class="response-input" placeholder="如果你愿意，可以写一点自己的经历……"></textarea>' +
+        '<button type="button" class="response-send">送出</button>' +
+      '</div>';
+    return card;
+  }
+
+  function renderResonancePager(count) {
+    if (!resonancePager) return;
+    if (count <= 1) {
+      resonancePager.style.display = "none";
+      return;
+    }
+    resonancePager.style.display = "";
+    var html = "";
+    for (var i = 0; i < count; i++) {
+      html += '<i class="' + (i === 0 ? "active" : "") + '"></i>';
+    }
+    resonancePager.innerHTML = html;
+  }
+
+  function loadResonanceFeed() {
+    if (!resonanceStack) return;
+    CB_API.getResonanceFeed().then(function (data) {
+      resonanceStories = data.stories || [];
+      resonanceStack.innerHTML = "";
+
+      if (resonanceStories.length === 0) {
+        resonanceStack.innerHTML = '<div class="resonance-empty">还没有其他人的故事。<br>等你写下的感受被更多人看到，这里会出现共鸣。</div>';
+        if (resonancePager) resonancePager.style.display = "none";
+        return;
+      }
+
+      for (var i = 0; i < resonanceStories.length; i++) {
+        resonanceStack.appendChild(renderResonanceCard(resonanceStories[i], i));
+      }
+      renderResonancePager(resonanceStories.length);
+      bindResonanceEvents();
+    }).catch(function (err) {
+      console.error("[API] getResonanceFeed failed:", err);
+      resonanceStack.innerHTML = '<div class="resonance-empty">故事加载中……</div>';
+    });
+  }
+
+  function bindResonanceEvents() {
+    var cards = resonanceStack.querySelectorAll(".resonance-card");
+    var dots = resonancePager ? resonancePager.querySelectorAll("i") : [];
+    var currentIdx = 0;
+
+    function updatePager(idx) {
+      for (var d = 0; d < dots.length; d++) dots[d].classList.remove("active");
+      if (dots[idx]) dots[idx].classList.add("active");
+    }
+
+    function nextCard() {
+      if (currentIdx >= cards.length - 1) return;
+      cards[currentIdx].classList.remove("active");
+      cards[currentIdx].classList.add("leaving");
+      var oldIdx = currentIdx;
+      setTimeout(function () {
+        cards[oldIdx].classList.remove("leaving");
+        currentIdx++;
+        if (cards[currentIdx]) cards[currentIdx].classList.add("active");
+        updatePager(currentIdx);
+      }, 450);
+    }
+
+    // 回应芯片
+    var chips = resonanceStack.querySelectorAll(".response-chip");
+    for (var r = 0; r < chips.length; r++) {
+      chips[r].addEventListener("click", function () {
+        var responseType = this.getAttribute("data-response");
+        var card = this.closest(".resonance-card");
+        var storyId = card ? card.getAttribute("data-story-id") : "";
+
+        if (responseType === "share") {
+          var expand = card.querySelector(".response-expand");
+          if (expand) expand.hidden = !expand.hidden;
+          return;
+        }
+
+        var allChips = card.querySelectorAll(".response-chip");
+        for (var c = 0; c < allChips.length; c++) allChips[c].disabled = true;
+
+        bubbleDNA.totalResponses++;
+        bubbleDNA.relationshipSignals.push({ type: responseType, time: Date.now() });
+
+        if (storyId && storyId.indexOf("seed_") !== 0) {
+          CB_API.createResponse(storyId, responseType).catch(function () {});
+        }
+
+        if (responseType === "empathy") addLightPoint("connection");
+        else if (responseType === "hug") addLightPoint("warmth");
+        else addLightPoint("connection");
+
+        setTimeout(nextCard, 1500);
+      });
+    }
+
+    // 送出经历
+    var sends = resonanceStack.querySelectorAll(".response-send");
+    for (var s = 0; s < sends.length; s++) {
+      sends[s].addEventListener("click", function () {
+        var card = this.closest(".resonance-card");
+        var input = card.querySelector(".response-input");
+        var storyId = card ? card.getAttribute("data-story-id") : "";
+        if (input && input.value.trim()) {
+          bubbleDNA.totalResponses++;
+          bubbleDNA.relationshipSignals.push({
+            type: "share", content: input.value.trim().substring(0, 80), time: Date.now()
+          });
+
+          if (storyId && storyId.indexOf("seed_") !== 0) {
+            CB_API.createResponse(storyId, "share", input.value.trim()).catch(function () {});
+          }
+
+          addLightPoint("warmth");
+          addLightPoint("connection");
+
+          var expand = card.querySelector(".response-expand");
+          if (expand) expand.hidden = true;
+          var allChips = card.querySelectorAll(".response-chip");
+          for (var c = 0; c < allChips.length; c++) allChips[c].disabled = true;
+          input.value = "";
+          setTimeout(nextCard, 1500);
+        }
+      });
+    }
+  }
 
   function addLightPoint(type) {
     if (!lightPoints) return;
@@ -889,98 +1053,6 @@
     point.style.left = (15 + Math.random() * 70) + "%";
     point.style.bottom = (10 + Math.random() * 60) + "%";
     lightPoints.appendChild(point);
-  }
-
-  // 回应芯片点击（Relationship 维度采集）
-  var responseChips = document.querySelectorAll(".response-chip");
-  for (var r = 0; r < responseChips.length; r++) {
-    responseChips[r].addEventListener("click", function () {
-      var responseType = this.getAttribute("data-response");
-      var card = this.closest(".resonance-card");
-
-      if (responseType === "share") {
-        var expand = card.querySelector(".response-expand");
-        if (expand) {
-          expand.hidden = !expand.hidden;
-          if (!expand.hidden) {
-            var input = expand.querySelector(".response-input");
-            if (input) input.focus();
-          }
-        }
-        return;
-      }
-
-      var allChips = card.querySelectorAll(".response-chip");
-      for (var c = 0; c < allChips.length; c++) {
-        allChips[c].disabled = true;
-      }
-      this.classList.add("responded");
-      this.textContent = "已送出";
-
-      // 记录 Relationship 信号
-      bubbleDNA.totalResponses++;
-      bubbleDNA.relationshipSignals.push({
-        type: responseType,
-        time: Date.now(),
-        source: "resonance"
-      });
-
-      // 记录 Evolution
-      bubbleDNA.evolution.push({
-        type: "response_given",
-        time: Date.now(),
-        responseType: responseType
-      });
-
-      saveDNA();
-
-      if (responseType === "empathy") addLightPoint("connection");
-      else if (responseType === "hug") addLightPoint("warmth");
-      else addLightPoint("connection");
-
-      setTimeout(nextCard, 1500);
-    });
-  }
-
-  // 送出经历（更高权重的 Relationship 信号）
-  var responseSends = document.querySelectorAll(".response-send");
-  for (var s = 0; s < responseSends.length; s++) {
-    responseSends[s].addEventListener("click", function () {
-      var card = this.closest(".resonance-card");
-      var input = card.querySelector(".response-input");
-      if (input && input.value.trim()) {
-        bubbleDNA.totalResponses++;
-        var sharedText = input.value.trim().substring(0, 80);
-        bubbleDNA.relationshipSignals.push({
-          type: "share",
-          content: sharedText,
-          time: Date.now(),
-          source: "resonance"
-        });
-
-        bubbleDNA.evolution.push({
-          type: "experience_shared",
-          time: Date.now(),
-          content: sharedText
-        });
-
-        saveDNA();
-
-        addLightPoint("warmth");
-        addLightPoint("connection");
-
-        var expand = card.querySelector(".response-expand");
-        if (expand) expand.hidden = true;
-
-        var allChips = card.querySelectorAll(".response-chip");
-        for (var c = 0; c < allChips.length; c++) {
-          allChips[c].disabled = true;
-        }
-
-        input.value = "";
-        setTimeout(nextCard, 1500);
-      }
-    });
   }
 
   // ====== 关于弹层 ======
@@ -994,19 +1066,9 @@
     if (e.target === aboutModal) aboutModal.hidden = true;
   });
 
-  // 重新开始：清除所有数据，设置重置标记，变成真正的空状态
-  // 挂载到 window 以便内联 onclick 也能调用
-  window.__bubbleReset = function () {
-    try {
-      localStorage.removeItem("bubbleDNA_v6");
-      localStorage.removeItem("bubbleSeeded_v6");
-      localStorage.setItem("bubbleReset_v6", "true");
-    } catch (e) {}
-    var modal = document.getElementById("aboutModal");
-    if (modal) modal.hidden = true;
-    setTimeout(function () {
-      window.location.reload();
-    }, 200);
+  // 退出登录：清除 token，回到登录页
+  window.__bubbleLogout = function () {
+    if (typeof CB_API !== "undefined") CB_API.logout();
   };
 
   var aboutReset = document.getElementById("aboutReset");
@@ -1086,6 +1148,228 @@
       requestAnimationFrame(animateWaves);
     }
     requestAnimationFrame(animateWaves);
+  }
+
+  // ====== 登录/注册页逻辑 ======
+  var authScreen = document.querySelector('.screen-auth');
+  var homeScreen = document.querySelector('.screen-home');
+  var authSubmit = document.getElementById('authSubmit');
+  var authToggle = document.getElementById('authToggle');
+  var authEmail = document.getElementById('authEmail');
+  var authPassword = document.getElementById('authPassword');
+  var authNickname = document.getElementById('authNickname');
+  var authError = document.getElementById('authError');
+  var isRegisterMode = false;
+
+  function showScreen(screenName) {
+    var screens = document.querySelectorAll('.screen');
+    for (var i = 0; i < screens.length; i++) {
+      screens[i].classList.remove('active');
+    }
+    var target = document.querySelector('.screen-' + screenName);
+    if (target) target.classList.add('active');
+    var tabbar = document.querySelector('.tabbar');
+    if (tabbar) tabbar.style.display = (screenName === 'home' || screenName === 'growth' || screenName === 'resonance') ? '' : 'none';
+  }
+
+  function showAuthScreen() { showScreen('auth'); }
+
+  function showOnboardScreen() { showScreen('onboard'); }
+
+  function showApp() {
+    showScreen('home');
+    applyBubbleState();
+    updateCycleDisplay();
+  }
+
+  // 登录/注册切换
+  if (authToggle) {
+    authToggle.addEventListener('click', function () {
+      isRegisterMode = !isRegisterMode;
+      if (isRegisterMode) {
+        authSubmit.textContent = '注册';
+        authToggle.textContent = '已有账号？登录';
+        authNickname.style.display = '';
+      } else {
+        authSubmit.textContent = '登录';
+        authToggle.textContent = '还没有账号？注册';
+        authNickname.style.display = 'none';
+      }
+      authError.textContent = '';
+    });
+  }
+
+  // 提交
+  if (authSubmit) {
+    authSubmit.addEventListener('click', async function () {
+      var email = authEmail.value.trim();
+      var password = authPassword.value;
+
+      if (!email || !password) {
+        authError.textContent = '请填写邮箱和密码';
+        return;
+      }
+
+      authSubmit.disabled = true;
+      authSubmit.textContent = '...';
+
+      try {
+        if (isRegisterMode) {
+          await CB_API.register(email, password, authNickname.value.trim() || undefined);
+        } else {
+          await CB_API.login(email, password);
+        }
+
+        authError.textContent = '';
+        await loadUserData();
+
+        // 新注册用户 → 经期引导；老用户 → 直接进首页
+        if (isRegisterMode) {
+          showOnboardScreen();
+        } else {
+          showApp();
+        }
+      } catch (err) {
+        authError.textContent = err.message || '操作失败';
+      } finally {
+        authSubmit.disabled = false;
+        authSubmit.textContent = isRegisterMode ? '注册' : '登录';
+      }
+    });
+  }
+
+  // ====== 经期 Onboarding 逻辑 ======
+  var onboardDates = document.getElementById('onboardDates');
+  var onboardAdd = document.getElementById('onboardAdd');
+  var onboardSkip = document.getElementById('onboardSkip');
+  var onboardSubmit = document.getElementById('onboardSubmit');
+  var onboardError = document.getElementById('onboardError');
+  var onboardDateCount = 1;
+
+  var dateLabels = ['最近一次', '上一次', '再上一次', '更早一次', '更早一次', '更早一次'];
+
+  if (onboardAdd) {
+    onboardAdd.addEventListener('click', function () {
+      if (onboardDateCount >= 6) return;
+      onboardDateCount++;
+      var row = document.createElement('div');
+      row.className = 'onboard-date-row';
+      var label = dateLabels[onboardDateCount - 1] || '更早一次';
+      row.innerHTML = '<label>' + label + '</label><input type="date" class="onboard-date-input" data-idx="' + (onboardDateCount - 1) + '">';
+      onboardDates.appendChild(row);
+      if (onboardDateCount >= 6) onboardAdd.style.display = 'none';
+    });
+  }
+
+  if (onboardSkip) {
+    onboardSkip.addEventListener('click', function () {
+      showApp();
+    });
+  }
+
+  if (onboardSubmit) {
+    onboardSubmit.addEventListener('click', async function () {
+      var inputs = onboardDates.querySelectorAll('.onboard-date-input');
+      var dates = [];
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].value) dates.push(inputs[i].value);
+      }
+
+      if (dates.length === 0) {
+        onboardError.textContent = '至少填写一次经期日期，或点"先跳过"';
+        return;
+      }
+
+      onboardSubmit.disabled = true;
+      onboardSubmit.textContent = '保存中...';
+
+      try {
+        // 按时间正序提交（最早的先提交）
+        dates.sort();
+        for (var d = 0; d < dates.length; d++) {
+          await CB_API.addPeriod(dates[d]);
+        }
+        showApp();
+      } catch (err) {
+        onboardError.textContent = err.message || '保存失败';
+      } finally {
+        onboardSubmit.disabled = false;
+        onboardSubmit.textContent = '完成';
+      }
+    });
+  }
+
+  // 周期状态显示
+  async function updateCycleDisplay() {
+    var cycleStatus = document.getElementById('cycleStatus');
+    var bubblePhase = document.getElementById('bubblePhase');
+    var bubbleHint = document.getElementById('bubbleHint');
+    if (!cycleStatus) return;
+
+    try {
+      var cycle = await CB_API.getCycleStatus();
+      if (!cycle.has_data) {
+        cycleStatus.textContent = '周期数据收集中';
+        if (bubblePhase) bubblePhase.textContent = '';
+        if (bubbleHint) bubbleHint.textContent = '';
+        return;
+      }
+
+      // phase 是 dict: {key, label, day_range, copy}
+      var phaseObj = cycle.phase || {};
+      var phaseLabel = phaseObj.label || '';
+      var phaseCopy = phaseObj.copy || '';
+      var confidence = cycle.confidence || 'low';
+      var confidenceLabel = confidence === 'high' ? '' : (confidence === 'medium' ? '（预测中）' : '（估算）');
+
+      cycleStatus.textContent = phaseLabel + '｜' + phaseCopy + confidenceLabel;
+      if (bubblePhase) bubblePhase.textContent = phaseLabel;
+      if (bubbleHint) bubbleHint.textContent = phaseCopy;
+    } catch (err) {
+      cycleStatus.textContent = '周期数据收集中';
+    }
+  }
+
+  // 从 API 加载用户数据
+  async function loadUserData() {
+    try {
+      var data = await CB_API.getMemories();
+      bubbleDNA.memories = (data.memories || []).map(function (m) {
+        return {
+          id: m.id,
+          snippet: m.snippet,
+          rawText: m.rawText,
+          timeLabel: m.timeLabel,
+          themes: m.themes,
+          triggers: m.triggers,
+          recovery: m.recovery,
+          emotions: m.emotions,
+          mood: m.mood,
+          expressionStyle: m.expressionStyle,
+          hasAction: m.hasAction,
+          event: m.event
+        };
+      });
+      bubbleDNA.totalRecords = bubbleDNA.memories.length;
+      isAppReady = true;
+    } catch (err) {
+      console.error('[API] loadUserData failed:', err);
+      isAppReady = true;
+      throw err; // 重新抛出，让调用方知道失败了
+    }
+  }
+
+  // 启动：始终先显示登录页，然后异步验证 token
+  // 这样即使有旧 token 也不会直接跳过登录页
+  showAuthScreen();
+
+  if (typeof CB_API !== 'undefined' && CB_API.isLoggedIn()) {
+    // 有 token：异步验证，成功才进 App，失败则留在登录页
+    loadUserData().then(function () {
+      showApp();
+    }).catch(function () {
+      CB_API.logout();
+    });
   }
 
 })();

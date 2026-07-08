@@ -1,22 +1,6 @@
-# CycleBubble ignore rules
-
-# Academic papers should not be pushed to GitHub
-cyclebubble_literature/papers/
-*.pdf
-
-# Local / temporary files
-.uploads/
-*.zip
-*.tmp
-*.log
-*.bak
-*_b64_*.txt
-
-# Dependencies and build outputs
+﻿__pycache__/
+*.pyc
+*.db
+.env
 node_modules/
-dist/
-build/
-
-# System files
-.DS_Store
-Thumbs.db
+*.log
