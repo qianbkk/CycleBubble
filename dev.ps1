@@ -17,12 +17,11 @@ $ErrorActionPreference = 'Stop'
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# --- Log rotation knobs ---------------------------------------------------
-# Logs in .runlogs/ are rotated by SIZE (not date).  When a log exceeds
-# $LogMaxBytes it rolls to .1, .2, ... up to $LogKeepCount total.
-# Reasonable defaults: 2 MB per file, keep 3 generations (current + 2 old).
+# --- 日志轮转配置 --------------------------------------------------------
+# 按大小轮转（不依赖时钟）。日志超过 $LogMaxBytes 时滚动到 .1, .2, ...
+# 保留 $LogKeepCount 代（含当前）。
 $LogMaxBytes  = 2 * 1024 * 1024   # 2 MB
-$LogKeepCount = 3                   # log, log.1, log.2 (max)
+$LogKeepCount = 3                   # log、log.1、log.2
 
 function Rotate-Log {
     param([string]$Path)
@@ -30,19 +29,18 @@ function Rotate-Log {
     $size = (Get-Item $Path).Length
     if ($size -lt $LogMaxBytes) { return }
 
-    # Rollover chain: .keep -> drop, .(keep-1) -> .keep, ..., .1 -> .2
-    $topIndex = $LogKeepCount          # the oldest we'd keep
+    # 滚动链：.keep → 删除；.(keep-1) → .keep；…；.1 → .2
+    $topIndex = $LogKeepCount
     if (Test-Path "$Path.$topIndex") { Remove-Item "$Path.$topIndex" -Force }
     for ($i = $topIndex - 1; $i -ge 1; $i--) {
         $from = "$Path.$i"
         $to   = "$Path.$($i + 1)"
         if (Test-Path $from) { Move-Item $from -Destination $to -Force }
     }
-    # current -> .1
     if (Test-Path $Path) {
         Move-Item $Path -Destination "$Path.1" -Force
     }
-    Write-Host ("  log rotated: {0} ({1} KB -> .1)" -f $Path, [int]($size / 1024)) -ForegroundColor DarkGray
+    Write-Host ("  已轮转日志：{0}（{1} KB → .1）" -f $Path, [int]($size / 1024)) -ForegroundColor DarkGray
 }
 
 
@@ -63,20 +61,23 @@ $FrontendOutFile   = Join-Path $LogDir 'frontend.out.log'
 $FrontendErrFile   = Join-Path $LogDir 'frontend.err.log'
 $CbJwtSecret       = 'dev-local-secret-not-for-prod'
 $CbCorsOrigins     = "http://localhost:$FrontendPort,http://127.0.0.1:$FrontendPort"
+# 与 backend/main.py 的 DEMO_EMAIL/DEMO_PASSWORD 保持一致（dev 启动横幅）
+$DemoEmail         = 'demo'
+$DemoPassword      = 'demo'
 
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
 
-# --- ANSI color helpers --------------------------------------------------
+# --- 顶部横幅 --------------------------------------------------------------
 function Write-Banner {
     Write-Host ''
-    Write-Host '============================================================' -ForegroundColor Cyan
-    Write-Host '   CycleBubble 本地开发'                                   -ForegroundColor Cyan
-    Write-Host '============================================================' -ForegroundColor Cyan
-    Write-Host ("   Backend  : http://{0}:{1}  (uvicorn)"   -f $BackendHost,  $BackendPort)
-    Write-Host ("   Frontend : http://{0}:{1}  (python -m http.server)" -f $FrontendHost, $FrontendPort)
-    Write-Host ("   API docs : http://{0}:{1}/docs"           -f $BackendHost,  $BackendPort)
-    Write-Host ("   Logs dir : {0}"                            -f $LogDir)
-    Write-Host '------------------------------------------------------------' -ForegroundColor Cyan
+    Write-Host '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' -ForegroundColor Cyan
+    Write-Host '       CycleBubble  本地开发服务' -ForegroundColor Cyan
+    Write-Host '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' -ForegroundColor Cyan
+    Write-Host ("   后端地址 ：http://{0}:{1}  (uvicorn)"   -f $BackendHost,  $BackendPort)
+    Write-Host ("   前端地址 ：http://{0}:{1}  (python -m http.server)" -f $FrontendHost, $FrontendPort)
+    Write-Host ("   接口文档 ：http://{0}:{1}/docs"          -f $BackendHost,  $BackendPort)
+    Write-Host ("   日志目录 ：{0}"                            -f $LogDir)
+    Write-Host '──────────────────────────────────────────────────────' -ForegroundColor Cyan
 }
 
 # Return @([int[]] $pids) of anything LISTENING on $port (IPv4 + IPv6).
@@ -162,18 +163,25 @@ function Get-ServiceState {
 
 function Print-State {
     param([string]$Label, [hashtable]$S)
+    $stateText = switch ($S.State) {
+        'running' { '运行中' }
+        'foreign' { '已被占用' }
+        'stopped' { '已停止' }
+    }
     $color = switch ($S.State) {
         'running' { 'Green'  }
         'foreign' { 'Yellow' }
         'stopped' { 'Gray'   }
     }
     $pidsStr = ''
-    if ($S.State -eq 'running') { $pidsStr = ($S.Pids -join ' ') }
-    elseif ($S.State -eq 'foreign') { $pidsStr = (($S.Pids -join ' ') + '  (not started by dev.bat)') }
+    if ($S.State -eq 'running') { $pidsStr = ("进程：{0}" -f ($S.Pids -join ' ')) }
+    elseif ($S.State -eq 'foreign') { $pidsStr = ("进程：{0}（非本脚本启动）" -f ($S.Pids -join ' ')) }
+    else { $pidsStr = '' }
     $port = if ($Label -eq 'backend') { $BackendPort } else { $FrontendPort }
-    Write-Host ("   {0,-9}: {1}    " -f $Label, $port) -NoNewline
-    Write-Host ("{0,-8}" -f $S.State) -ForegroundColor $color -NoNewline
-    Write-Host (" PIDs: {0}" -f $pidsStr)
+    $labelText = if ($Label -eq 'backend') { '后端服务' } else { '前端服务' }
+    Write-Host ("   {0,-9}  端口 {1,-5}  " -f $labelText, $port) -NoNewline
+    Write-Host ("{0,-8}" -f $stateText) -ForegroundColor $color -NoNewline
+    if ($pidsStr) { Write-Host ("  {0}" -f $pidsStr) } else { Write-Host '' }
 }
 
 function Http-Probe {
@@ -193,12 +201,12 @@ function Http-Probe {
     }
     if ($ok) {
         Write-Host ("   {0,-22}" -f $Label) -NoNewline
-        Write-Host 'UP    ' -ForegroundColor Green -NoNewline
-        Write-Host ("http {0}" -f $code)
+        Write-Host '可访问' -ForegroundColor Green -NoNewline
+        Write-Host ("  HTTP {0}" -f $code)
     } else {
         Write-Host ("   {0,-22}" -f $Label) -NoNewline
-        Write-Host 'DOWN  ' -ForegroundColor Gray -NoNewline
-        Write-Host ("http {0}" -f $code)
+        Write-Host '不可访问' -ForegroundColor Gray -NoNewline
+        Write-Host ("  HTTP {0}" -f $code)
     }
 }
 
@@ -208,12 +216,12 @@ function Show-Status {
     Print-State 'backend'  $be
     $fe = Get-ServiceState -Port $FrontendPort -PidFile $FrontendPidFile -Label 'frontend'
     Print-State 'frontend' $fe
-    Write-Host '------------------------------------------------------------' -ForegroundColor Gray
-    Write-Host '[HTTP probe]'                                            -ForegroundColor Cyan
-    Http-Probe 'backend /health   ' ("http://{0}:{1}/health" -f $BackendHost,  $BackendPort)
-    Http-Probe 'backend /docs     ' ("http://{0}:{1}/docs"   -f $BackendHost,  $BackendPort)
-    Http-Probe 'frontend /        ' ("http://{0}:{1}/"       -f $FrontendHost, $FrontendPort)
-    Write-Host '------------------------------------------------------------' -ForegroundColor Gray
+    Write-Host '──────────────────────────────────────────────────────' -ForegroundColor Gray
+    Write-Host '【接口探测】'                                              -ForegroundColor Cyan
+    Http-Probe '后端 健康检查   '  ("http://{0}:{1}/api/health" -f $BackendHost,  $BackendPort)
+    Http-Probe '后端 接口文档   '  ("http://{0}:{1}/docs"       -f $BackendHost,  $BackendPort)
+    Http-Probe '前端 入口页面   '  ("http://{0}:{1}/"           -f $FrontendHost, $FrontendPort)
+    Write-Host '──────────────────────────────────────────────────────' -ForegroundColor Gray
     Write-Host ''
 }
 
@@ -229,8 +237,9 @@ function Start-One {
     )
     $portPids = Get-PidsOnPort -Port ($ExtraEnv.Port)
     if ($portPids.Count -gt 0) {
-        Write-Host ("{0} :{1} 端口已被占用,PID: {2}" -f $Label, $ExtraEnv.Port, ($portPids -join ' ')) -ForegroundColor Yellow
-        Write-Host '   跳过启动。如需重启请先 stop 或手动 taskkill。'
+        $labelText2 = if ($Label -eq 'backend') { '后端服务' } else { '前端服务' }
+        Write-Host ("⚠ {0} 端口 {1} 已被占用（PID：{2}）" -f $labelText2, $ExtraEnv.Port, ($portPids -join ' ')) -ForegroundColor Yellow
+        Write-Host '   跳过启动。如需重启请先执行 stop 或手动 taskkill。'
         return
     }
 
@@ -240,11 +249,9 @@ function Start-One {
     Rotate-Log -Path $OutFile
     Rotate-Log -Path $ErrFile
 
-    Write-Host ("[start] {0}  ...  > {1}, 2> {2}" -f $Label, $OutFile, $ErrFile) -ForegroundColor Cyan
+    $labelText = if ($Label -eq 'backend') { '后端服务' } else { '前端服务' }
+    Write-Host ("▶ 启动 {0}  ...  日志：{1}" -f $labelText, $OutFile) -ForegroundColor Cyan
     try {
-        # Start-Process with -PassThru returns a Process object whose .Id is the
-        # child PID we can later kill.  WorkingDirectory + redirects make the
-        # child fully detached from this shell.
         $proc = Start-Process -FilePath 'python.exe' `
                               -ArgumentList $CommandArgs `
                               -WorkingDirectory $WorkingDir `
@@ -252,57 +259,46 @@ function Start-One {
                               -RedirectStandardError  $ErrFile `
                               -WindowStyle Hidden `
                               -PassThru
-        Write-Host ("   {0}  spawned PID {1}" -f $Label, $proc.Id) -ForegroundColor Gray
+        Write-Host ("   已派生子进程：PID {0}" -f $proc.Id) -ForegroundColor Gray
     } catch {
-        Write-Host ("  {0}  Start-Process FAILED: {1}" -f $Label, $_.Exception.Message) -ForegroundColor Red
+        Write-Host ("   ✗ 启动失败：{0}" -f $_.Exception.Message) -ForegroundColor Red
         return
     }
 
-    # Best-effort: push env vars onto the child process.  Not strictly needed
-    # because they're inherited from parent shell, but useful if user has
-    # different values in scope.
     foreach ($k in $ExtraEnv.Keys) {
         if ($k -eq 'Port') { continue }
         try { [Environment]::SetEnvironmentVariable($k, $ExtraEnv[$k], 'Process') } catch { }
     }
 
-    # Write pid file LAST so a half-started service never has a stale pid entry.
-    # Note: param is $ProcessId because $PID/$Pid is reserved in PowerShell.
-    # If the write fails (rare, depends on PowerShell stream state), status()
-    # will report 'foreign' instead of 'running' — stop() uses port lookup so
-    # the script still works.
+    # 写 PID 文件放最后，避免半启动状态留下脏记录
     $pidWritten = Write-PidFile -ProcessId $proc.Id -Path $PidFile
     if ($pidWritten) {
-        Write-Host ("{0}  started, PID {1}" -f $Label, $proc.Id) -ForegroundColor Green
+        Write-Host ("✓ {0} 已就绪  PID {1}" -f $labelText, $proc.Id) -ForegroundColor Green
     } else {
-        Write-Host ("{0}  started, PID {1}  (pid file not written; status will show 'foreign')" -f $Label, $proc.Id) -ForegroundColor Yellow
+        Write-Host ("⚠ {0} 已就绪  PID {1}（PID 文件未写入，状态会显示「已被占用」，不影响使用）" -f $labelText, $proc.Id) -ForegroundColor Yellow
     }
 }
 
 function Stop-One {
     param([string]$Label, [int]$Port, [string]$PidFile)
-    # Always kill whatever is listening on $Port.  PID file is a hint we read
-    # FIRST, but if it's missing or stale we still recover via the port lookup,
-    # which is the durable source of truth.
+    $labelText = if ($Label -eq 'backend') { '后端服务' } else { '前端服务' }
     $ownPids = Read-PidFile -Path $PidFile
     $portPids = Get-PidsOnPort -Port $Port
     $targets = @($portPids | Sort-Object -Unique)
     if ($targets.Count -eq 0 -and $ownPids.Count -eq 0) {
-        Write-Host ("{0}  :{1} already stopped" -f $Label, $Port) -ForegroundColor Gray
+        Write-Host ("{0} 端口 {1} 本来就没在运行" -f $labelText, $Port) -ForegroundColor Gray
         return
     }
     foreach ($p in $targets) {
         try { Stop-Process -Id $p -Force -ErrorAction Stop } catch { }
     }
-    # Also kill any stale PIDs from the file (process may have died but file
-    # remained).  Don't fail if they're already gone.
     foreach ($p in $ownPids) {
         if ($targets -notcontains $p) {
             try { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue } catch { }
         }
     }
     Remove-PidFile -Path $PidFile
-    Write-Host ("{0}  stopped (port {1}, killed {2} process(es))" -f $Label, $Port, $targets.Count) -ForegroundColor Green
+    Write-Host ("✓ {0} 已停止  端口 {1}，结束 {2} 个进程" -f $labelText, $Port, $targets.Count) -ForegroundColor Green
 }
 
 # --- Actions -------------------------------------------------------------
@@ -313,6 +309,28 @@ function Action-Start {
     Start-One -Label 'frontend' -WorkingDir $FrontendDir -CommandArgs @('-m','http.server',[string]$FrontendPort,'--bind',$FrontendHost) `
               -PidFile $FrontendPidFile -OutFile $FrontendOutFile -ErrFile $FrontendErrFile `
               -ExtraEnv @{ Port=$FrontendPort }
+    Write-Host ''
+    # 等后端冷启动，再探测；OK 后顺手把 demo 账号横幅打出来
+    $ready = $false
+    for ($i = 0; $i -lt 25; $i++) {
+        try {
+            $h = Invoke-WebRequest -Uri ("http://{0}:{1}/api/health" -f $BackendHost, $BackendPort) `
+                                   -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
+            if ($h.StatusCode -lt 400) { $ready = $true; break }
+        } catch { Start-Sleep -Milliseconds 400 }
+    }
+    if ($ready) {
+        Write-Host '   ┌──────────────────────────────────────────────┐' -ForegroundColor Cyan
+        Write-Host '   │  本地演示账号（后端自动注入，开箱即用）      │' -ForegroundColor Cyan
+        Write-Host '   │                                              │' -ForegroundColor Cyan
+        Write-Host ("   │    账号   ：{0,-32}│" -f $DemoEmail) -ForegroundColor Cyan
+        Write-Host ("   │    密码   ：{0,-32}│" -f $DemoPassword) -ForegroundColor Cyan
+        Write-Host '   │                                              │' -ForegroundColor Cyan
+        Write-Host '   │  关闭自动注入：CB_DEMO_USER=0 启动           │' -ForegroundColor DarkGray
+        Write-Host '   └──────────────────────────────────────────────┘' -ForegroundColor Cyan
+    } else {
+        Write-Host '   ⚠ 后端 /api/health 10 秒内未就绪，跳过演示账号提示，请查看 .runlogs/backend.err.log' -ForegroundColor Yellow
+    }
     Write-Host ''
     Show-Status
 }
@@ -327,12 +345,12 @@ function Action-Stop {
 function Action-Restart {
     Action-Stop
     Write-Host ''
-    Write-Host 'wait 1.5s before restart ...' -ForegroundColor Cyan
+    Write-Host '等待 1.5 秒后重新启动 ...' -ForegroundColor Cyan
     Start-Sleep -Seconds 1.5
     Action-Start
 }
 
-# --- Dispatch ------------------------------------------------------------
+# --- 子命令分发 -----------------------------------------------------------
 $action = if ($args.Count -gt 0) { $args[0] } else { '' }
 switch -Regex ($action) {
     '^start$'   { Action-Start;   return }
@@ -341,40 +359,41 @@ switch -Regex ($action) {
     '^status$'  { Show-Status;    return }
     '^help$'    {
         Write-Host ''
-        Write-Host 'Usage: dev.bat [start|stop|restart|status|help]'
-        Write-Host '   no arg     interactive menu (start/stop/restart/status/exit)'
-        Write-Host '   start      后端 + 前端一起拉起'
-        Write-Host '   stop       一起关停'
-        Write-Host '   restart    stop 后再 start'
-        Write-Host '   status     端口 + PID + HTTP 健康'
+        Write-Host '用法：dev.bat [start|stop|restart|status|help]'
+        Write-Host '   无参数   进入交互菜单（启动/停止/重启/状态/退出）'
+        Write-Host '   start    同时启动后端和前端'
+        Write-Host '   stop     同时关闭后端和前端'
+        Write-Host '   restart  先停止再启动'
+        Write-Host '   status   查看端口、进程、HTTP 健康状态'
+        Write-Host '   help     显示本帮助'
         Write-Host ''
         return
     }
     '^$' {
-        # interactive menu
+        # 交互菜单
         while ($true) {
             Write-Banner
             Write-Host ''
-            Write-Host 'Choose action:' -ForegroundColor Yellow
-            Write-Host '   1) start BOTH'
-            Write-Host '   2) stop BOTH'
-            Write-Host '   3) restart BOTH'
-            Write-Host '   0) status'
-            Write-Host '   9) exit'
+            Write-Host '请选择操作：' -ForegroundColor Yellow
+            Write-Host '   1) 启动后端 + 前端'
+            Write-Host '   2) 停止后端 + 前端'
+            Write-Host '   3) 重启后端 + 前端'
+            Write-Host '   0) 查看状态'
+            Write-Host '   9) 退出'
             Write-Host ''
-            $choice = Read-Host '  Your choice [0-3, 9]'
+            $choice = Read-Host '  输入选项 [0-3, 9]'
             switch ($choice) {
-                '1' { Action-Start;   pause; continue }
-                '2' { Action-Stop;    pause; continue }
-                '3' { Action-Restart; pause; continue }
-                '0' { Show-Status;    pause; continue }
+                '1' { Action-Start;   Write-Host "`n按任意键返回菜单 ..."; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); continue }
+                '2' { Action-Stop;    Write-Host "`n按任意键返回菜单 ..."; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); continue }
+                '3' { Action-Restart; Write-Host "`n按任意键返回菜单 ..."; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); continue }
+                '0' { Show-Status;    Write-Host "`n按任意键返回菜单 ..."; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); continue }
                 '9' { return }
-                default { Write-Host ("unknown choice '{0}'" -f $choice) -ForegroundColor Red }
+                default { Write-Host ("未知选项 '{0}'，请重新输入" -f $choice) -ForegroundColor Red; Start-Sleep -Seconds 1 }
             }
         }
     }
     default {
-        Write-Host ("unknown subcommand: {0}" -f $action) -ForegroundColor Red
-        Write-Host 'try: dev.bat help'
+        Write-Host ("未知子命令：{0}" -f $action) -ForegroundColor Red
+        Write-Host '请用 dev.bat help 查看支持的命令'
     }
 }
