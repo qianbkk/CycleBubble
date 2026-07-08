@@ -11,3 +11,14 @@ node_modules/
 # 用户临时截图/Claude 配置 (本地开发用,不入版本控制)
 _screenshots/
 .claude/
+
+# 设计稿早期原型的字体与 JS 资源 (历史快照,新文件不入库)
+/design/prototype-archive/v1-html/_shared/
+/design/prototype-archive/v1-html/assets/
+
+# 设计稿截图脚本输出 (tools/render-screenshots.mjs),后续可忽略入库
+/design/renders/
+
+# 文献 PDF (见 README 学术论文一节),evidence/literature-curated.json
+# 仅保留清单,不下发 PDF 全文
+/evidence/papers/
