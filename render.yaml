@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: cyclebubble-api
+    runtime: python
+    rootDir: backend
+    installCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: CB_JWT_SECRET
+        generateValue: true
+      - key: DEEPSEEK_API_KEY
+        sync: false
+    plan: free
