@@ -17,7 +17,35 @@ $ErrorActionPreference = 'Stop'
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# --- Config --------------------------------------------------------------
+# --- Log rotation knobs ---------------------------------------------------
+# Logs in .runlogs/ are rotated by SIZE (not date).  When a log exceeds
+# $LogMaxBytes it rolls to .1, .2, ... up to $LogKeepCount total.
+# Reasonable defaults: 2 MB per file, keep 3 generations (current + 2 old).
+$LogMaxBytes  = 2 * 1024 * 1024   # 2 MB
+$LogKeepCount = 3                   # log, log.1, log.2 (max)
+
+function Rotate-Log {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return }
+    $size = (Get-Item $Path).Length
+    if ($size -lt $LogMaxBytes) { return }
+
+    # Rollover chain: .keep -> drop, .(keep-1) -> .keep, ..., .1 -> .2
+    $topIndex = $LogKeepCount          # the oldest we'd keep
+    if (Test-Path "$Path.$topIndex") { Remove-Item "$Path.$topIndex" -Force }
+    for ($i = $topIndex - 1; $i -ge 1; $i--) {
+        $from = "$Path.$i"
+        $to   = "$Path.$($i + 1)"
+        if (Test-Path $from) { Move-Item $from -Destination $to -Force }
+    }
+    # current -> .1
+    if (Test-Path $Path) {
+        Move-Item $Path -Destination "$Path.1" -Force
+    }
+    Write-Host ("  log rotated: {0} ({1} KB -> .1)" -f $Path, [int]($size / 1024)) -ForegroundColor DarkGray
+}
+
+
 $ScriptDir         = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot       = $ScriptDir
 $BackendDir        = Join-Path $ProjectRoot 'backend'
@@ -205,6 +233,13 @@ function Start-One {
         Write-Host '   跳过启动。如需重启请先 stop 或手动 taskkill。'
         return
     }
+
+    # Rotate before each start so the new run lands on a fresh log file.
+    # Rotation is size-based (no clock dependency), so it's safe to call
+    # back-to-back from rapid restart loops.
+    Rotate-Log -Path $OutFile
+    Rotate-Log -Path $ErrFile
+
     Write-Host ("[start] {0}  ...  > {1}, 2> {2}" -f $Label, $OutFile, $ErrFile) -ForegroundColor Cyan
     try {
         # Start-Process with -PassThru returns a Process object whose .Id is the
