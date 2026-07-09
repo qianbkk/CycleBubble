@@ -6,6 +6,7 @@
   <title>CycleBubble</title>
   <meta name="description" content="CycleBubble — 一个持续理解你的情绪空间。">
   <link rel="stylesheet" href="./styles.css?v=20260707r">
+  <script src="./api.js?v=20260710a"></script>
 </head>
 <body>
   <main class="phone-frame" aria-label="CycleBubble">
@@ -14,6 +15,16 @@
       <!-- ====== 首页（今日） ====== -->
       <div class="screen screen-home active" data-screen="home">
         <div class="screen-body">
+          <button class="icon-btn icon-btn--gear" type="button" id="gearBtn" aria-label="导入经期数据">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+          <button class="login-pill" type="button" id="loginPill" hidden>
+            <span>登录以同步你的数据</span>
+            <span class="login-pill-arrow" aria-hidden="true">›</span>
+          </button>
           <p class="cycle-status" id="cycleStatus">黄体期｜今天身体可能比平时更容易放大情绪感受</p>
 
           <section class="bubble-wrap" aria-label="你的泡泡">
@@ -141,6 +152,13 @@
           <div class="action-stack" style="padding:0; margin-top:24px;">
             <button class="primary-action" type="button" data-goto="resonance">去看看她们的故事</button>
           </div>
+
+          <!-- 成长页空状态 -->
+          <div class="empty-state empty-state--growth" id="growthEmptyState" hidden>
+            <div class="empty-state-icon" aria-hidden="true"></div>
+            <h3 class="empty-state-title">还在沉淀中</h3>
+            <p class="empty-state-desc">Bubble 需要时间了解你的节奏。<br>记录几条之后，这里会开始浮现你的发现。</p>
+          </div>
         </div>
       </div>
 
@@ -209,6 +227,128 @@
             <h3>你的回应也在陪伴别人</h3>
             <p>每一次回应，都会成为别人低谷时的一点光。不需要完美，只需要真实。</p>
           </section>
+
+          <!-- 回应页空状态 -->
+          <div class="empty-state empty-state--resonance" id="resonanceEmptyState" hidden>
+            <div class="empty-state-icon" aria-hidden="true"></div>
+            <h3 class="empty-state-title">还没有相似经历</h3>
+            <p class="empty-state-desc">你愿意成为第一个分享的人吗？<br>你的故事可能会陪伴到和你有相同感受的人。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 经期导入页 ====== -->
+      <div class="screen screen-import" data-screen="import">
+        <header class="nav-bar">
+          <button class="back-btn" type="button" data-back="home" aria-label="返回首页">‹</button>
+          <span class="nav-title">导入经期</span>
+          <span class="nav-spacer"></span>
+        </header>
+        <div class="screen-body">
+          <p class="import-intro">Bubble 想知道你的节奏。<br>导入历史经期数据后，它会变得更懂你。</p>
+
+          <h3 class="section-label">选择导入方式</h3>
+
+          <!-- 三选项卡片 -->
+          <div class="import-options">
+            <button class="import-option" type="button" data-source="manual">
+              <span class="import-option-icon" aria-hidden="true">📅</span>
+              <span class="import-option-title">手动填写</span>
+              <span class="import-option-desc">逐条输入最近 6 次经期</span>
+            </button>
+
+            <button class="import-option" type="button" data-source="manyou">
+              <span class="import-option-icon" aria-hidden="true">🌸</span>
+              <span class="import-option-title">美柚 App</span>
+              <span class="import-option-desc">从美柚导出 JSON 文件上传</span>
+            </button>
+
+            <button class="import-option" type="button" data-source="apple">
+              <span class="import-option-icon" aria-hidden="true">🍎</span>
+              <span class="import-option-title">Apple Health</span>
+              <span class="import-option-desc">从健康 App 导出数据</span>
+            </button>
+          </div>
+
+          <!-- 手动填写表单 -->
+          <div class="import-panel" id="importManualPanel" hidden>
+            <h4 class="import-panel-title">手动填写</h4>
+            <p class="import-panel-desc">输入最近 6 次经期的开始日期（结束日期和流量选填）</p>
+            <div class="import-manual-list" id="importManualList">
+              <!-- 由 JS 动态生成 6 个日期输入框 -->
+            </div>
+            <div class="import-actions">
+              <button class="btn-primary btn-block" type="button" id="importManualSubmit">提交</button>
+              <button class="btn-link" type="button" id="importManualCancel">取消</button>
+            </div>
+          </div>
+
+          <!-- 美柚导入 -->
+          <div class="import-panel" id="importManyouPanel" hidden>
+            <h4 class="import-panel-title">美柚 App</h4>
+            <p class="import-panel-desc">在美柚 App：我的 → 设置 → 数据导出，导出 JSON 文件后上传</p>
+            <input type="file" id="importManyouFile" accept=".json,.csv" />
+            <div class="import-preview" id="importManyouPreview"></div>
+            <div class="import-actions">
+              <button class="btn-primary btn-block" type="button" id="importManyouSubmit" disabled>导入</button>
+              <button class="btn-link" type="button" id="importManyouCancel">取消</button>
+            </div>
+          </div>
+
+          <!-- Apple Health 导入 -->
+          <div class="import-panel" id="importApplePanel" hidden>
+            <h4 class="import-panel-title">Apple Health</h4>
+            <p class="import-panel-desc">iOS 健康 App → 头像 → 导出所有健康数据，导出 zip 解压后找到 `apple_health_export/export.xml`</p>
+            <p class="import-panel-desc">本工具暂不直接解析 XML，请用第三方工具转换为 JSON 后上传（格式要求包含 startDate / endDate 字段）</p>
+            <input type="file" id="importAppleFile" accept=".json" />
+            <div class="import-preview" id="importApplePreview"></div>
+            <div class="import-actions">
+              <button class="btn-primary btn-block" type="button" id="importAppleSubmit" disabled>导入</button>
+              <button class="btn-link" type="button" id="importAppleCancel">取消</button>
+            </div>
+          </div>
+
+          <!-- 导入完成提示 -->
+          <div class="import-panel import-panel--success" id="importSuccessPanel" hidden>
+            <h4 class="import-panel-title">导入成功 ✨</h4>
+            <p class="import-panel-desc" id="importSuccessText"></p>
+            <button class="btn-primary btn-block" type="button" data-back="home">回到首页</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 登录/注册页 ====== -->
+      <div class="screen screen-auth" data-screen="auth">
+        <div class="auth-body">
+          <div class="auth-bubble">
+            <div class="auth-bubble-icon" aria-hidden="true"></div>
+          </div>
+          <h1 class="auth-title">CycleBubble</h1>
+          <p class="auth-sub">一个持续理解你的情绪空间</p>
+
+          <form class="auth-form" id="authForm" autocomplete="on" novalidate>
+            <label class="auth-field">
+              <span class="auth-label">邮箱</span>
+              <input class="auth-input" type="email" id="authEmail" placeholder="your@email.com" autocomplete="email" required>
+            </label>
+            <label class="auth-field">
+              <span class="auth-label">密码</span>
+              <input class="auth-input" type="password" id="authPassword" placeholder="至少 4 位" autocomplete="current-password" minlength="4" required>
+            </label>
+            <label class="auth-field auth-field--nick" id="authNicknameField" hidden>
+              <span class="auth-label">昵称（选填）</span>
+              <input class="auth-input" type="text" id="authNickname" placeholder="想被怎么称呼" maxlength="20">
+            </label>
+
+            <button class="btn-primary btn-block" type="submit" id="authSubmit">登录</button>
+            <button class="btn-link" type="button" id="authToggle">还没有账号？注册</button>
+            <p class="auth-error" id="authError" hidden></p>
+          </form>
+
+          <button class="auth-quick" type="button" id="authQuick" hidden>
+            <span class="auth-quick-icon" aria-hidden="true">✦</span>
+            快速体验（demo / demo）
+          </button>
         </div>
       </div>
 

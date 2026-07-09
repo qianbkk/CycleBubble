@@ -1,78 +1,147 @@
 # CycleBubble
 
-CycleBubble 是一款帮助女性理解周期与情绪关系的产品。它不是经期预测工具，也不是冥想或治疗产品；核心价值是帮助用户理解情绪可能从哪里来。
+> 一个持续理解你的情绪空间。
 
-## 项目定位
+CycleBubble 是一款帮助女性**理解周期与情绪关系**的产品。它通过长期记录用户的情绪表达，逐渐形成对该用户的理解（Emotional DNA），帮助用户看见"这种情绪可能从哪里来"。
 
-用户打开 CycleBubble 后，第一眼应看到自己的周期状态和情绪线索，而不是产品理念。产品重点包括：
+## 🎯 核心理念
 
-- 当前周期状态
-- 情绪倾向解释
-- 今日关注点
-- 用户个人记录线索
-- 匿名共鸣机制
+- **Settling, not Growing**：沉淀而非成长。Bubble 是随时间沉积出独特结构的生命体。
+- **观察，不定义**：AI 永远只说"我注意到了"，不说"你是怎样的人"。
+- **连接，不传播**：共鸣是"有人和我有相似经历"的温暖，不是"有多少人点赞"。
 
-## 当前保留内容
+## 🏗️ 架构
 
-### 最新设计稿
+```
+CycleBubble/
+├── index.html          # 前端主入口（视觉）
+├── styles.css          # 前端样式
+├── script.js           # 前端逻辑
+├── backend/            # FastAPI 后端
+│   ├── main.py
+│   ├── config.py
+│   ├── database.py
+│   ├── models.py       # 数据模型
+│   ├── auth.py         # JWT 认证
+│   ├── cycle_engine.py # 周期计算
+│   └── routers/        # API 路由
+│       ├── auth.py
+│       ├── cycle.py
+│       ├── memory.py
+│       ├── resonance.py
+│       └── growth.py
+├── requirements.txt    # Python 依赖
+├── dev.bat             # Windows 启动脚本
+└── dev.ps1             # PowerShell 启动脚本
+```
 
-| 文件 | 内容 |
-|---|---|
-| `cyclebubble_v4_four_pages_liquid_overview.png` | 最新四页面总览，采用液体泡泡视觉 |
-| `cyclebubble_v4_home_liquid_bubble.png` | 最新首页，圆形容器液体泡泡版本 |
-| `cyclebubble_v4_cycle_bubble_liquid.png` | 最新周期泡泡页，液体面表达周期进度 |
-| `cyclebubble_v4_emotion_record_minimal.png` | 最新情绪记录页，保留纯书写体验 |
-| `cyclebubble_v4_anonymous_resonance_minimal.png` | 最新匿名共鸣页，去社交化卡片体验 |
-| `cyclebubble_v4_liquid_bubble_asset.png` | 液体泡泡视觉资产 |
-| `cyclebubble_home_real_product_375.png` | 最新首页设计稿，采用真实产品首页布局 |
-| `cyclebubble_home_real_product_board.png` | 最新首页设计说明版 |
-| `cyclebubble_three_core_pages_hifi.png` | 三个核心页面总览图 |
-| `cyclebubble_page_cycle_bubble_hifi.png` | 周期泡泡页高保真稿 |
-| `cyclebubble_page_emotion_record_hifi.png` | 情绪记录页高保真稿 |
-| `cyclebubble_page_anonymous_resonance_hifi.png` | 匿名共鸣页高保真稿 |
+## 🚀 启动方式
 
-### 产品说明
+### Windows（推荐）
 
-| 文件 | 内容 |
-|---|---|
-| `cyclebubble_page_manual.html` | 页面说明书 |
-| `INDEX.md` | 项目文件索引 |
-| `youhua.txt` | 项目优化指南 |
+双击运行 `dev.bat` 或在 PowerShell 中：
+```powershell
+.\dev.ps1
+```
 
-### 原型页面
+脚本会自动：
+1. 创建 Python 虚拟环境（首次）
+2. 安装依赖
+3. 启动后端服务
 
-| 路径 | 内容 |
-|---|---|
-| `cyclebubble/cyclebubble.html` | 原 CycleBubble HTML 页面 |
-| `cyclebubble/cyclebubble-standalone.html` | 独立版 HTML 页面 |
-| `cyclebubble/assets/` | 页面图片与图表资源 |
-| `cyclebubble/_shared/` | 字体和 JS 依赖 |
+服务启动后：
+- API 地址：`http://localhost:8000`
+- API 文档：`http://localhost:8000/docs`（Swagger UI）
 
-### 文献证据
+### 手动启动
 
-| 路径 | 内容 |
-|---|---|
-| `cyclebubble_literature/cyclebubble_evidence_to_features.html` | 文献证据到功能映射报告 |
-| `cyclebubble_literature/cyclebubble_evidence_to_features.json` | 结构化证据映射 |
-| `cyclebubble_literature/cyclebubble_literature_curated.json` | 筛选文献清单 |
+```bash
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# 或 venv\Scripts\activate (Windows)
 
-## 关于学术论文
+# 安装依赖
+pip install -r requirements.txt
 
-`cyclebubble_literature/papers/` 中的学术论文 PDF 不会推送到 GitHub。仓库只保留文献清单和证据映射文件，避免上传论文全文。
+# 启动服务
+uvicorn backend.main:app --reload
+```
 
-## Demo 核心页面
+### 前端
 
-当前 Demo 建议聚焦 4 个页面：
+直接用浏览器打开 `index.html`，或者用本地 HTTP 服务器：
+```bash
+python -m http.server 8080
+# 然后访问 http://localhost:8080
+```
 
-1. 首页：展示用户当前周期状态与情绪线索
-2. 周期泡泡页：解释周期阶段和情绪倾向
-3. 情绪记录页：记录当下感受
-4. 匿名共鸣页：展示相似感受的匿名回应
+## 📡 API 端点
 
-## 设计原则
+### 认证
+- `POST /api/auth/register` — 注册
+- `POST /api/auth/login` — 登录
+- `GET /api/auth/me` — 获取当前用户
 
-- 用户第一眼看到自己的数据，而不是产品理念
-- 数据是解释依据，不是视觉主角
-- 首页回答“我的情绪可能从哪里来”
-- 避免科技感、赛博朋克、AI 概念图和玻璃拟态
-- 保持温柔、克制、留白和可信赖
+### 周期
+- `POST /api/cycle/periods` — 手动添加一次经期
+- `POST /api/cycle/import/manyou` — 导入美柚格式
+- `POST /api/cycle/import/apple-health` — 导入 Apple Health 格式
+- `GET /api/cycle/periods` — 获取所有经期记录
+- `GET /api/cycle/status` — 获取当前周期状态
+
+### 记忆
+- `POST /api/memories` — 创建一条情绪记录
+- `GET /api/memories` — 获取用户所有记忆
+
+### 共鸣
+- `GET /api/resonance/feed` — 获取公开故事流
+- `POST /api/resonance/{id}/respond` — 对一条故事发送回应
+
+### 成长
+- `GET /api/growth` — 获取成长页数据
+
+## 📊 数据模型
+
+- **User**：用户（邮箱 + 密码哈希 + JWT）
+- **Cycle**：经期记录（开始日期、结束日期、流量、来源）
+- **Memory**：情绪记录（原文 + LLM 抽取的 themes/triggers/recovery/emotions）
+- **Response**：共鸣回应（对某条公开记忆的回应）
+
+## 📚 文献支撑
+
+本产品的设计理念基于 16 篇精选学术文献，详见 `cyclebubble_literature/` 目录。
+
+核心依据：
+- 60万周期数据分析（npj Digital Medicine 2019）
+- 数字心理健康 App 设计（JMIR Mental Health 2016/2020）
+- 经期追踪 HCI 研究（CHI 2017）
+- 隐私与女性健康（JMIR mHealth 2022）
+
+## 🛠️ 技术栈
+
+- **前端**：原生 HTML/CSS/JavaScript（无框架），保持轻量
+- **后端**：FastAPI + SQLModel + SQLite
+- **认证**：JWT (HS256)
+- **数据库**：SQLite（本地文件 `cyclebubble.db`）
+
+## ⚙️ 环境变量
+
+后端支持以下环境变量（前缀 `CB_`）：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CB_DATABASE_URL` | `sqlite:///./cyclebubble.db` | 数据库连接字符串 |
+| `CB_JWT_SECRET` | `dev-secret-change-me-in-production` | JWT 签名密钥 |
+| `CB_JWT_EXPIRE_HOURS` | `168` | Token 有效期（小时） |
+| `CB_CORS_ORIGINS` | `["*"]` | 允许的跨域来源（JSON 列表） |
+
+## 📝 开发说明
+
+- 数据库文件 `cyclebubble.db` 会在首次启动时自动创建
+- 当前实现使用本地关键词抽取作为 LLM 的兜底
+- 视觉风格严格保留早期 demo 的"流动泡泡"美学
+
+## 📜 许可
+
+仅供学习和个人使用。

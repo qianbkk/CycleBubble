@@ -17,6 +17,22 @@ node_modules/
 dist/
 build/
 
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# SQLite database (local dev only)
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # System files
 .DS_Store
 Thumbs.db
