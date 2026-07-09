@@ -30,6 +30,7 @@ class MemoryResponse(BaseModel):
     created_at: str
 
 import json
+from ..safety import scan_crisis
 
 def parse_json_list(s: str, default=None):
     """安全解析 JSON 列表"""
@@ -127,6 +128,9 @@ def create_memory(
     session.commit()
     session.refresh(memory)
 
+    # 危机信号兜底：永远不阻断保存，只在响应里标记，由前端决定是否展示
+    crisis = scan_crisis(memory.raw_text)
+
     return {
         "id": memory.id,
         "raw_text": memory.raw_text,
@@ -136,7 +140,8 @@ def create_memory(
         "emotions": parse_json_list(memory.emotions),
         "mood": memory.mood,
         "is_public": memory.is_public,
-        "created_at": memory.created_at.isoformat()
+        "created_at": memory.created_at.isoformat(),
+        "crisis": crisis,
     }
 
 @router.get("")

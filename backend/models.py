@@ -52,3 +52,13 @@ class Response(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     memory: Optional[Memory] = Relationship(back_populates="responses")
+
+class Report(SQLModel, table=True):
+    __tablename__ = "report"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    memory_id: int = Field(foreign_key="memory.id", index=True)
+    reporter_user_id: int = Field(foreign_key="user.id", index=True)
+    reason: str = Field(max_length=30)  # spam/harassment/self_harm_concern/other
+    note: Optional[str] = Field(default=None, max_length=500)
+    status: str = Field(default="open", max_length=20)  # open/reviewed/dismissed
+    created_at: datetime = Field(default_factory=datetime.utcnow)

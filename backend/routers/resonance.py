@@ -1,5 +1,7 @@
 from datetime import datetime
 from typing import Optional
+from collections import defaultdict
+from time import time
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -25,6 +27,24 @@ def parse_json_list(s: str, default=None):
         return json.loads(s)
     except Exception:
         return default
+
+# 频控：每用户每小时最多 30 次回应（防骚扰 / 刷屏）
+RATE_LIMIT_WINDOW = 3600  # 1 hour
+RATE_LIMIT_MAX = 30
+
+# 简化的内存级频控（生产环境应该用 Redis）
+_response_log = defaultdict(list)
+
+def _check_rate_limit(user_id: int) -> bool:
+    """返回 True 表示通过，False 表示超限"""
+    now = time()
+    log = _response_log[user_id]
+    # 清理窗口外的记录
+    log[:] = [t for t in log if now - t < RATE_LIMIT_WINDOW]
+    if len(log) >= RATE_LIMIT_MAX:
+        return False
+    log.append(now)
+    return True
 
 @router.get("/feed")
 def get_resonance_feed(
@@ -67,6 +87,13 @@ def respond_to_memory(
     session: Session = Depends(get_session)
 ):
     """对一条公开记忆发送回应"""
+    # 频控：每用户每小时最多 30 次回应（防骚扰 / 刷屏）
+    if not _check_rate_limit(current_user.id):
+        raise HTTPException(
+            status_code=429,
+            detail=f"回应太频繁，请稍后再试（每小时最多 {RATE_LIMIT_MAX} 次）"
+        )
+
     if req.type not in VALID_RESPONSE_TYPES:
         raise HTTPException(
             status_code=400,

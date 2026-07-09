@@ -157,3 +157,64 @@ def get_cycle_status(
         select(Cycle).where(Cycle.user_id == current_user.id).order_by(Cycle.start_date)
     ).all()
     return compute_cycle_status(cycles)
+
+class PeriodUpdate(BaseModel):
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    flow: Optional[str] = None
+
+@router.patch("/periods/{period_id}")
+def update_period(
+    period_id: int,
+    req: PeriodUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """修正单条经期记录
+
+    - 跨用户隔离：操作别的用户的 period_id 直接 404
+    - 仅修改提供的字段
+    - end_date 必须 >= start_date（否则 400）
+    """
+    cycle = session.get(Cycle, period_id)
+    if not cycle or cycle.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    if req.start_date is not None:
+        cycle.start_date = req.start_date
+    if req.end_date is not None:
+        if req.end_date < cycle.start_date:
+            raise HTTPException(status_code=400, detail="结束日期必须晚于开始日期")
+        cycle.end_date = req.end_date
+    if req.flow is not None:
+        cycle.flow = req.flow
+
+    session.add(cycle)
+    session.commit()
+    session.refresh(cycle)
+
+    return {
+        "id": cycle.id,
+        "start_date": cycle.start_date.isoformat(),
+        "end_date": cycle.end_date.isoformat() if cycle.end_date else None,
+        "flow": cycle.flow,
+        "source": cycle.source
+    }
+
+@router.delete("/periods/{period_id}")
+def delete_period(
+    period_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """删除一条经期记录（用户纠错用）
+
+    - 跨用户隔离：操作别的用户的 period_id 直接 404
+    """
+    cycle = session.get(Cycle, period_id)
+    if not cycle or cycle.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    session.delete(cycle)
+    session.commit()
+    return {"deleted": True, "id": period_id}
