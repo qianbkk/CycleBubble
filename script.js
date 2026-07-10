@@ -1143,9 +1143,10 @@
       }
     }
 
-    // 影响卡片（动态，优先用后端数据，否则用本地 bubbleDNA.totalResponses 兜底）
+    // 影响卡片：仅 demo 模式用本地 bubbleDNA.totalResponses 兜底
+    // 真实模式留给 loadAndApplyGrowthData 用后端 impact.accompanied_count 写入
     var impactText = document.querySelector(".impact-text");
-    if (impactText && bubbleDNA.totalResponses > 0) {
+    if (impactText && isDemoMode && bubbleDNA.totalResponses > 0) {
       var count = 3 + bubbleDNA.totalResponses;
       impactText.innerHTML = "你的经历，陪伴了 <strong>" + count + " 位</strong>正在经历相似感受的人。";
     }
@@ -1365,23 +1366,40 @@
       setTimeout(function () {
         clearInterval(msgInterval);
 
-        // 结构化抽取 Memory（一滴水进入 Bubble，形成新的矿物层）
-        var newMemory = extractMemory(userInput, "今天");
-        bubbleDNA.memories.push(newMemory);
-        bubbleDNA.totalRecords++;
+        // demo 模式：只存 localStorage（已有种子记忆基础上的追加）
+        if (isDemoMode) {
+          var newMemory = extractMemory(userInput, "今天");
+          bubbleDNA.memories.push(newMemory);
+          bubbleDNA.totalRecords++;
 
-        // 记录 DNA Evolution
-        bubbleDNA.evolution.push({
-          type: "memory_added",
-          time: Date.now(),
-          memoryId: newMemory.id,
-          themes: newMemory.themes
-        });
+          bubbleDNA.evolution.push({
+            type: "memory_added",
+            time: Date.now(),
+            memoryId: newMemory.id,
+            themes: newMemory.themes
+          });
 
-        saveDNA();
+          saveDNA();
 
-        switchTo("insight");
-        applyBubbleState();
+          switchTo("insight");
+          applyBubbleState();
+        } else {
+          // 真实模式：调后端持久化
+          persistMemoryToBackend(userInput).then(function (ok) {
+            switchTo("insight");
+            applyBubbleState();
+          }).catch(function (err) {
+            // 后端失败：仍写 localStorage 但提示
+            console.warn('保存到后端失败:', err);
+            showDemoToast('保存失败，请检查网络');
+            var newMemory = extractMemory(userInput, "今天");
+            bubbleDNA.memories.push(newMemory);
+            bubbleDNA.totalRecords++;
+            saveDNA();
+            switchTo("insight");
+            applyBubbleState();
+          });
+        }
 
         setTimeout(function () {
           saveBtn.style.display = "";
@@ -1393,6 +1411,34 @@
         }, 500);
       }, 3000);
     });
+  }
+
+  // 真实模式：调后端 POST /api/memories，成功后用后端返回的数据更新 bubbleDNA
+  async function persistMemoryToBackend(rawText) {
+    if (!window.CB_API || !CB_API.memory || !CB_API.memory.create) {
+      throw new Error('API 不可用');
+    }
+    var resp = await CB_API.memory.create(rawText, false);
+    if (!resp || !resp.id) {
+      throw new Error('后端响应无效');
+    }
+    var local = backendMemoryToLocal(resp);
+    bubbleDNA.memories.push(local);
+    bubbleDNA.totalRecords = bubbleDNA.memories.length;
+    bubbleDNA._patternsCache = null;
+    bubbleDNA._patternsCacheVersion++;
+    bubbleDNA.evolution.push({
+      type: "memory_added",
+      time: Date.now(),
+      memoryId: local.id,
+      themes: local.themes
+    });
+    saveDNA();
+    // 危机信号：如果后端检测到风险词，前端弹援助 modal
+    if (resp.crisis && resp.crisis.risk_level && resp.crisis.risk_level !== 'none') {
+      showCrisisModal(resp.crisis.resources);
+    }
+    return true;
   }
 
   // ====== 回应系统 ======
