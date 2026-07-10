@@ -6,10 +6,13 @@
 (function () {
   'use strict';
 
-  // Base URL 自动适配：本地连 localhost:8000，其他用 Render
+  // Base URL 自动适配：
+  // 1. localhost/127.0.0.1 本地开发 → http://localhost:8000
+  // 2. 部署环境默认同源（用 Nginx 反代 /api/，零配置）
+  // 3. 可被 window.__API_BASE__ 显式覆盖（Render 等跨域部署场景）
   const BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:8000'
-    : 'https://cyclebubble-api.onrender.com';
+    : (window.__API_BASE__ !== undefined ? window.__API_BASE__ : '');
 
   const TOKEN_KEY = 'cb_token';
 
