@@ -1,8 +1,17 @@
 ﻿@echo off
+REM ==========================================================
+REM  CycleBubble 后端启动脚本（双击运行）
+REM
+REM  使用方法：双击 dev.bat
+REM  - 脚本会自动切到所在目录运行（无需硬编码路径）
+REM  - 端口冲突会提示选择（关闭进程 / 换端口）
+REM  - 错误时会暂停等待查看，不会闪退
+REM ==========================================================
+
 chcp 65001 >nul
 cd /d "%~dp0"
 
-REM ===== 配置端口（想换端口改这里）=====
+REM ===== 可配置：端口 =====
 set "PORT=8000"
 
 echo ===================================
@@ -10,42 +19,45 @@ echo  CycleBubble 后端启动 (端口 %PORT%)
 echo ===================================
 echo.
 
-REM =============================================
+REM ==========================================================
 REM  Step 1: 检查 Python
-REM =============================================
+REM ==========================================================
 where python >nul 2>&1
 if errorlevel 1 (
     echo [错误] 未找到 Python，请先安装 Python 3.10+
+    echo        下载地址: https://www.python.org/downloads/
+    echo.
     pause
     exit /b 1
 )
 echo [OK] Python 已找到
 
-REM =============================================
-REM  Step 2: 检查依赖（全局 Python）
-REM =============================================
+REM ==========================================================
+REM  Step 2: 检查依赖（fastapi 是否已装）
+REM ==========================================================
 python -c "import fastapi" >nul 2>&1
 if errorlevel 1 (
-    echo [1/3] 安装依赖（首次运行需联网）...
+    echo [1/2] 安装依赖（首次运行需联网）...
     python -m pip install --index-url http://pypi.org/simple --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
     if errorlevel 1 (
         echo.
         echo [错误] 依赖安装失败
-        echo 提示: 网络受限？尝试运行 python -m pip install -r requirements.txt 手动安装
+        echo 提示: 网络受限？尝试手动运行:
+        echo        python -m pip install -r requirements.txt
+        echo.
         pause
         exit /b 1
     )
-    echo [2/3] 依赖安装完成
+    echo [2/2] 依赖安装完成
 ) else (
-    echo [1/3] 依赖已安装
-    echo [2/3] 跳过 pip install
+    echo [1/2] 依赖已安装
+    echo [2/2] 跳过 pip install
 )
-echo [3/3] 准备启动
 echo.
 
-REM =============================================
+REM ==========================================================
 REM  Step 3: 检查端口冲突
-REM =============================================
+REM ==========================================================
 netstat -ano | findstr ":%PORT% " >nul 2>&1
 if not errorlevel 1 (
     echo [警告] 端口 %PORT% 已被占用
@@ -53,7 +65,7 @@ if not errorlevel 1 (
     echo.
     echo 请选择:
     echo   [1] 自动关闭占用进程后继续
-    echo   [2] 修改 dev.bat 第 6 行 set PORT=XXXX 换端口
+    echo   [2] 退出并修改本脚本第 12 行 PORT=XXXX 换端口
     echo.
     set /p "CHOICE=请输入 (1 或 2): "
     if "!CHOICE!"=="1" (
@@ -63,15 +75,16 @@ if not errorlevel 1 (
         )
         timeout /t 2 >nul
     ) else (
-        echo 已取消。请修改 dev.bat 第 6 行设置 PORT。
+        echo 已取消。请编辑 dev.bat 第 12 行修改 PORT。
+        echo.
         pause
         exit /b 1
     )
 )
 
-REM =============================================
-REM  Step 4: 启动后端（直接用全局 Python）
-REM =============================================
+REM ==========================================================
+REM  Step 4: 启动后端
+REM ==========================================================
 echo ===================================
 echo  后端启动中
 echo  API:   http://localhost:%PORT%/docs
@@ -83,4 +96,6 @@ echo.
 
 python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port %PORT%
 
+echo.
+echo 后端已停止
 pause
