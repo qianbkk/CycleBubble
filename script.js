@@ -178,6 +178,151 @@
     bubbleDNA.totalRecords = seedMemories.length;
   }
 
+  // ====== 模式管理：演示 / 正常 ======
+  // 通过 URL 参数可强制：?demo=1 强制演示，?mode=app 强制正常
+  var urlParams = (function () {
+    try { return new URLSearchParams(window.location.search); }
+    catch (e) { return null; }
+  })();
+  // 移除 ?demo=1：演示模式仅由用户主动从登录页点击触发
+  var forceApp = urlParams && urlParams.get('mode') === 'app';
+  var isDemoMode = false;
+  var authAutoSwitched = false; // 防止 initAuthState 重复切屏
+
+  function isAppMode() { return !isDemoMode; }
+
+  function refreshDemoBar() {
+    var bar = document.getElementById('demoBar');
+    var pill = document.getElementById('loginPill');
+    if (bar) bar.hidden = !isDemoMode;
+    // loginPill 仅在 demo 模式下显示，作为"想用完整功能"的入口
+    if (pill) pill.hidden = !isDemoMode;
+  }
+
+  function showDemoToast(message) {
+    var existing = document.getElementById('demoToast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.id = 'demoToast';
+    toast.className = 'demo-toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.classList.add('demo-toast--show'); }, 10);
+    setTimeout(function () {
+      toast.classList.remove('demo-toast--show');
+      setTimeout(function () { toast.remove(); }, 300);
+    }, 2500);
+  }
+
+  // ====== 演示模式种子数据 ======
+  var demoStories = [
+    {
+      id: 'demo-1',
+      anonymous_name: '一位相似经历的人',
+      text_excerpt: '这个月我又开始反复想那件事了，好像每个月都会有一周是这样……',
+      themes: ['自我'],
+      mood: '难过',
+      days_ago: 2
+    },
+    {
+      id: 'demo-2',
+      anonymous_name: '一位相似经历的人',
+      text_excerpt: '今天朋友说她也是这样，她找到的方法是写下来，我也想试试……',
+      themes: ['关系'],
+      mood: '平静',
+      days_ago: 5
+    },
+    {
+      id: 'demo-3',
+      anonymous_name: '一位相似经历的人',
+      text_excerpt: '以前会觉得自己太敏感了，现在开始觉得也许只是这个阶段的正常反应……',
+      themes: ['自我'],
+      mood: '平静',
+      days_ago: 9
+    }
+  ];
+
+  var demoGrowthStories = [
+    {
+      text: '这两段话是不同时期留下的。',
+      tag: '表达方式',
+      quotes: [
+        { text: '我是不是太敏感了？', time: '三个月前' },
+        { text: '好像在意的是自己有没有被认可。', time: '两周前' }
+      ]
+    },
+    {
+      text: '最近你提到了两次"朋友"。',
+      tag: '关系',
+      quotes: [
+        { text: '和朋友聊了之后好多了。', time: '两个月前' },
+        { text: '今天主动说出了自己的想法。', time: '一周前' }
+      ]
+    }
+  ];
+
+  // ====== 援助 modal 触发逻辑 ======
+  function showCrisisModal(resources) {
+    var modal = document.getElementById('crisisModal');
+    var list = document.getElementById('crisisResources');
+    if (!modal || !list) return;
+
+    // 渲染资源列表
+    list.innerHTML = '';
+    if (!resources || resources.length === 0) {
+      // 后端没有传 resources，用硬编码兜底
+      resources = [
+        { name: '全国心理援助热线', phone: '400-161-9995', hours: '24h', type: 'phone' },
+        { name: '北京心理危机研究与干预中心', phone: '010-82951332', hours: '24h', type: 'phone' },
+        { name: '希望24热线', phone: '400-161-9995', hours: '24h', type: 'phone' },
+        { name: '简单心理', url: 'https://www.simplecare.cn', type: 'online' }
+      ];
+    }
+
+    resources.forEach(function (r) {
+      var item = document.createElement('div');
+      item.className = 'crisis-resource';
+
+      var icon = document.createElement('div');
+      icon.className = 'crisis-resource-icon';
+      icon.textContent = r.type === 'online' ? '✦' : '☎';
+
+      var body = document.createElement('div');
+      body.className = 'crisis-resource-body';
+
+      var name = document.createElement('div');
+      name.className = 'crisis-resource-name';
+      name.textContent = r.name;
+
+      var detail = document.createElement('div');
+      detail.className = 'crisis-resource-detail';
+      if (r.phone) {
+        detail.innerHTML = '<a href="tel:' + r.phone + '">' + r.phone + '</a>' + (r.hours ? ' · ' + r.hours : '');
+      } else if (r.url) {
+        detail.innerHTML = '<a href="' + r.url + '" target="_blank" rel="noopener">' + r.url + '</a>';
+      }
+
+      body.appendChild(name);
+      body.appendChild(detail);
+      item.appendChild(icon);
+      item.appendChild(body);
+      list.appendChild(item);
+    });
+
+    modal.hidden = false;
+  }
+
+  function hideCrisisModal() {
+    var modal = document.getElementById('crisisModal');
+    if (modal) modal.hidden = true;
+  }
+
+  // 关闭按钮
+  var crisisCloseBtn = document.getElementById('crisisCloseBtn');
+  if (crisisCloseBtn) crisisCloseBtn.addEventListener('click', hideCrisisModal);
+  var crisisDismissBtn = document.getElementById('crisisDismissBtn');
+  if (crisisDismissBtn) crisisDismissBtn.addEventListener('click', hideCrisisModal);
+
   // ====== Pattern 聚合层 ======
   // 从 memories 动态计算 Pattern，不存储。
   // AI 只能调用已存在的 Pattern，不能创造不存在的 Pattern。
@@ -558,6 +703,250 @@
 
   applyBubbleState();
 
+  // ====== 数据加载（接后端 API）======
+  // 仅替换硬编码数据来源，不改视觉。失败时保留原 HTML 兜底。
+  async function loadCycleStatus() {
+    // 演示模式：使用硬编码
+    if (isDemoMode) {
+      var el = document.getElementById('cycleStatus');
+      if (el) el.textContent = '黄体期｜今天身体可能比平时更容易放大情绪感受';
+      return;
+    }
+    try {
+      if (!window.CB_API || !window.CB_API.cycle || !window.CB_API.cycle.getStatus) return;
+      const status = await window.CB_API.cycle.getStatus();
+      if (!status || !status.phase_name) return;
+      const text = status.phase_name + "｜" + (status.description || "");
+      const confidence = status.confidence;
+      let suffix = "";
+      if (confidence === "low") suffix = "（估算）";
+      else if (confidence === "medium") suffix = "（预测中）";
+      else if (confidence === "none") suffix = "";
+      const el = document.getElementById("cycleStatus");
+      if (el) el.textContent = text + suffix;
+
+      // 同步更新主泡泡上的 phase 标签和提示（如果后端返回了）
+      const phaseEl = document.getElementById("bubblePhase");
+      if (phaseEl && status.phase_name) phaseEl.textContent = status.phase_name;
+    } catch (e) {
+      console.warn("加载周期状态失败:", e);
+      // 兜底：保留原有 HTML 文案
+    }
+  }
+
+  async function loadGrowthData() {
+    // 演示模式：返回种子数据
+    if (isDemoMode) {
+      return {
+        total_records: 5,
+        empty_state: false,
+        timeline: [
+          { week: '2026-W28', count: 2, first_text: '这个阶段又到了...' },
+          { week: '2026-W26', count: 1, first_text: '今天又因为...' },
+          { week: '2026-W24', count: 2, first_text: '和朋友聊了之后...' }
+        ],
+        discoveries: [
+          { type: 'mood', title: '最近的主导情绪', content: '难过', evidence_count: 2 },
+          { type: 'theme', title: '最常出现的感受主题', content: '自我', evidence_count: 3 }
+        ],
+        impact: { accompanied_count: 5, response_count: 2 },
+        isDemo: true,
+        demoStories: demoGrowthStories
+      };
+    }
+    // 正常模式：从 API 获取
+    try {
+      if (!window.CB_API || !window.CB_API.growth || !window.CB_API.growth.get) return null;
+      const data = await window.CB_API.growth.get();
+      return data || null;
+    } catch (e) {
+      console.warn("加载成长数据失败:", e);
+      return null;
+    }
+  }
+
+  async function loadResonanceFeed() {
+    // 演示模式：返回种子共鸣故事
+    if (isDemoMode) {
+      return demoStories;
+    }
+    // 正常模式：从 API 获取
+    try {
+      if (!window.CB_API || !window.CB_API.resonance || !window.CB_API.resonance.getFeed) return [];
+      const data = await window.CB_API.resonance.getFeed(10);
+      return (data && data.stories) ? data.stories : [];
+    } catch (e) {
+      console.warn("加载共鸣流失败:", e);
+      return [];
+    }
+  }
+
+  // 渲染单张共鸣卡片（DOM 结构与 HTML 中的种子卡片一致，class 全保留）
+  function buildResonanceCardFromStory(story, index) {
+    var inlineStyle = "border:1.5px solid rgba(181,169,207,.3);border-radius:36px 36px 32px 32px;background:radial-gradient(ellipse at 30% 0%,rgba(245,217,216,.4),transparent 50%),radial-gradient(ellipse at 70% 100%,rgba(240,237,247,.45),transparent 50%),linear-gradient(180deg,rgba(255,253,251,.99),rgba(248,244,250,.92));box-shadow:0 20px 48px rgba(82,63,74,.12),inset 0 2px 0 rgba(255,255,255,.8);";
+    var activeClass = (index === 0) ? " active" : "";
+    // 匿名泡泡编号：根据 id 散列出一个稳定数字
+    var num = 10 + ((story.id || 0) * 7 % 80) | 0;
+    var text = (story.text_excerpt || "").replace(/[<>&"']/g, function (c) {
+      return ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+    var html = "";
+    html += '<section class="resonance-card' + activeClass + '" style="' + inlineStyle + '" data-index="' + index + '">';
+    html += '<p class="anonymous">匿名泡泡 ' + num + '</p>';
+    html += '<p class="quote">"' + text + '"</p>';
+    html += '<div class="response-options">';
+    html += '<button type="button" class="response-chip" data-response="empathy">我也经历过</button>';
+    html += '<button type="button" class="response-chip" data-response="thanks">谢谢你的分享</button>';
+    html += '<button type="button" class="response-chip" data-response="hug">抱抱你</button>';
+    html += '<button type="button" class="response-chip response-chip--expand" data-response="share">分享我的经历</button>';
+    html += '</div>';
+    html += '<div class="response-expand" hidden>';
+    html += '<textarea class="response-input" placeholder="如果你愿意，可以写一点自己的经历……"></textarea>';
+    html += '<button type="button" class="response-send">送出</button>';
+    html += '</div>';
+    html += '</section>';
+    return html;
+  }
+
+  // 把共鸣流渲染到回应页（含空状态、视觉结构 100% 复用 HTML 原版）
+  async function renderResonanceFeed() {
+    var stack = document.getElementById("resonanceStack");
+    var dots = document.getElementById("pageDots");
+    var empty = document.getElementById("resonanceEmptyState");
+    if (!stack) return;
+
+    var stories = await loadResonanceFeed();
+    if (!stories || stories.length === 0) {
+      // 空状态：隐藏 stack 和 dots，显示空状态元素
+      stack.style.display = "none";
+      if (dots && dots.parentNode) dots.parentNode.style.display = "none";
+      if (empty) empty.hidden = false;
+      return;
+    }
+
+    // 渲染 stories
+    var html = "";
+    for (var i = 0; i < stories.length; i++) {
+      html += buildResonanceCardFromStory(stories[i], i);
+    }
+    stack.innerHTML = html;
+    if (empty) empty.hidden = true;
+
+    // 重新初始化分页器与回应芯片
+    initResonancePager();
+
+    // 更新 dots 数量
+    if (dots) {
+      var dotsHtml = "";
+      for (var d = 0; d < stories.length; d++) {
+        dotsHtml += d === 0 ? '<i class="active"></i>' : '<i></i>';
+      }
+      dots.innerHTML = dotsHtml;
+    }
+  }
+
+  function initResonancePager() {
+    resonanceCards = document.querySelectorAll(".resonance-card");
+    pageDots = document.querySelectorAll("#pageDots i");
+    currentIndex = 0;
+    totalCards = resonanceCards.length;
+    if (totalCards > 0 && resonanceCards[0]) resonanceCards[0].classList.add("active");
+    bindResponseChips();
+    bindResponseSends();
+  }
+
+  function bindResponseChips() {
+    var responseChips = document.querySelectorAll(".resonance-card .response-chip");
+    for (var r = 0; r < responseChips.length; r++) {
+      responseChips[r].addEventListener("click", function () {
+        var responseType = this.getAttribute("data-response");
+        var card = this.closest(".resonance-card");
+        if (!card) return;
+
+        if (responseType === "share") {
+          var expand = card.querySelector(".response-expand");
+          if (expand) {
+            expand.hidden = !expand.hidden;
+            if (!expand.hidden) {
+              var input = expand.querySelector(".response-input");
+              if (input) input.focus();
+            }
+          }
+          return;
+        }
+
+        var allChips = card.querySelectorAll(".response-chip");
+        for (var c = 0; c < allChips.length; c++) {
+          allChips[c].disabled = true;
+        }
+        this.classList.add("responded");
+        this.textContent = "已送出";
+
+        bubbleDNA.totalResponses++;
+        bubbleDNA.relationshipSignals.push({
+          type: responseType,
+          time: Date.now(),
+          source: "resonance"
+        });
+        bubbleDNA.evolution.push({
+          type: "response_given",
+          time: Date.now(),
+          responseType: responseType
+        });
+        saveDNA();
+
+        if (responseType === "empathy") addLightPoint("connection");
+        else if (responseType === "hug") addLightPoint("warmth");
+        else addLightPoint("connection");
+
+        setTimeout(nextCard, 1500);
+      });
+    }
+  }
+
+  function bindResponseSends() {
+    var responseSends = document.querySelectorAll(".resonance-card .response-send");
+    for (var s = 0; s < responseSends.length; s++) {
+      responseSends[s].addEventListener("click", function () {
+        var card = this.closest(".resonance-card");
+        if (!card) return;
+        var input = card.querySelector(".response-input");
+        if (input && input.value.trim()) {
+          bubbleDNA.totalResponses++;
+          var sharedText = input.value.trim().substring(0, 80);
+          bubbleDNA.relationshipSignals.push({
+            type: "share",
+            content: sharedText,
+            time: Date.now(),
+            source: "resonance"
+          });
+          bubbleDNA.evolution.push({
+            type: "experience_shared",
+            time: Date.now(),
+            content: sharedText
+          });
+          saveDNA();
+
+          addLightPoint("warmth");
+          addLightPoint("connection");
+
+          var expand = card.querySelector(".response-expand");
+          if (expand) expand.hidden = true;
+
+          var allChips = card.querySelectorAll(".response-chip");
+          for (var c = 0; c < allChips.length; c++) {
+            allChips[c].disabled = true;
+          }
+          input.value = "";
+          setTimeout(nextCard, 1500);
+        }
+      });
+    }
+  }
+
+  // 立即触发一次周期状态加载（首页文案）
+  loadCycleStatus();
+
   // ====== 理解页渲染（Evidence → Pattern → Reflection，动态引用用户原话） ======
   var growthStoryIndex = 0;
 
@@ -643,6 +1032,9 @@
 
     var p = getPatterns();
 
+    // 异步加载成长数据（含陪伴人数、空状态）
+    loadAndApplyGrowthData();
+
     // 记忆时间线（只展示最早和最近，形成时间对比，不列全部）
     var timeline = document.getElementById("memoryTimeline");
     if (timeline) {
@@ -689,11 +1081,57 @@
       }
     }
 
-    // 影响卡片（动态）
+    // 影响卡片（动态，优先用后端数据，否则用本地 bubbleDNA.totalResponses 兜底）
     var impactText = document.querySelector(".impact-text");
     if (impactText && bubbleDNA.totalResponses > 0) {
       var count = 3 + bubbleDNA.totalResponses;
       impactText.innerHTML = "你的经历，陪伴了 <strong>" + count + " 位</strong>正在经历相似感受的人。";
+    }
+  }
+
+  // 异步加载成长数据，并刷新影响卡片（不阻塞页面渲染）
+  async function loadAndApplyGrowthData() {
+    var data = await loadGrowthData();
+    if (!data) return;
+
+    // 空状态：后端没有数据 → 显示空状态元素、隐藏主内容
+    var empty = document.getElementById("growthEmptyState");
+    var memorySection = document.getElementById("memorySection");
+    var storiesSection = document.getElementById("growthStoriesSection");
+    var impactSection = document.getElementById("impactSection");
+    var resonanceLead = document.querySelector(".resonance-lead");
+    var screen = document.querySelector('.screen[data-screen="growth"]');
+    var body = screen ? screen.querySelector(".screen-body") : null;
+    var hasLocalData = bubbleDNA.memories.length > 0;
+
+    if (data.empty_state === true && !hasLocalData) {
+      // 真·空状态
+      if (empty) empty.hidden = false;
+      if (memorySection) memorySection.style.display = "none";
+      if (storiesSection) storiesSection.style.display = "none";
+      if (impactSection) impactSection.style.display = "none";
+      if (resonanceLead) resonanceLead.style.display = "none";
+      // 空状态下隐藏 action-stack（去看看她们的故事 按钮）
+      var actionStack = screen ? screen.querySelector(".action-stack") : null;
+      if (actionStack) actionStack.style.display = "none";
+      return;
+    }
+
+    // 非空状态：恢复显示
+    if (empty) empty.hidden = true;
+    if (memorySection) memorySection.style.display = "";
+    if (storiesSection) storiesSection.style.display = "";
+    if (impactSection) impactSection.style.display = "";
+    if (resonanceLead) resonanceLead.style.display = "";
+    var actionStack2 = screen ? screen.querySelector(".action-stack") : null;
+    if (actionStack2) actionStack2.style.display = "";
+
+    // 更新影响数字（如果后端给了）
+    var impactText = document.querySelector(".impact-text");
+    if (impactText && data.impact) {
+      var accompanied = (data.impact.accompanied_count != null) ? data.impact.accompanied_count : (3 + bubbleDNA.totalResponses);
+      var impactSub = impactText.parentNode.querySelector(".impact-sub");
+      impactText.innerHTML = "你的经历，陪伴了 <strong>" + accompanied + " 位</strong>正在经历相似感受的人。";
     }
   }
 
@@ -741,6 +1179,31 @@
     }
   }
 
+  // ====== 登录/注册状态与 helper ======
+  // 与后端 CB_API.auth.* 配合。仅添加事件处理，不触碰视觉/Bubble 状态逻辑。
+  var isRegisterMode = false;
+
+  function showAuthError(message) {
+    var errEl = document.getElementById('authError');
+    if (!errEl) return;
+    if (message) {
+      errEl.textContent = message;
+      errEl.hidden = false;
+    } else {
+      errEl.hidden = true;
+    }
+  }
+
+  function updateAuthMode() {
+    var submitBtn = document.getElementById('authSubmit');
+    var toggleBtn = document.getElementById('authToggle');
+    var nickField = document.getElementById('authNicknameField');
+    if (submitBtn) submitBtn.textContent = isRegisterMode ? '注册' : '登录';
+    if (toggleBtn) toggleBtn.textContent = isRegisterMode ? '已有账号？登录' : '还没有账号？注册';
+    if (nickField) nickField.hidden = !isRegisterMode;
+    showAuthError('');
+  }
+
   // ====== 页面切换 ======
   function switchTo(name) {
     var screens = document.querySelectorAll(".screen");
@@ -759,6 +1222,7 @@
     if (name === "home") applyBubbleState();
     if (name === "insight") renderInsightPage();
     if (name === "growth") renderGrowthPage();
+    if (name === "resonance") renderResonanceFeed();
   }
 
   var tabItems = document.querySelectorAll(".tab-item");
@@ -802,6 +1266,12 @@
 
   if (saveBtn) {
     saveBtn.addEventListener("click", function () {
+      // 演示模式拦截：弹 toast 提示但不保存
+      if (isDemoMode) {
+        showDemoToast('演示模式无法保存，登录后可以记录你的真实情绪');
+        return;
+      }
+
       var userInput = "";
       if (recordInput && recordInput.value.trim()) {
         userInput = recordInput.value.trim();
@@ -1086,6 +1556,430 @@
       requestAnimationFrame(animateWaves);
     }
     requestAnimationFrame(animateWaves);
+  }
+
+  // ====== 经期导入交互（手动 / 美柚 / Apple Health） ======
+  // 只追加：helpers + 事件绑定。不触碰视觉与 Bubble 状态逻辑。
+  // 屏幕切换复用现有 switchTo() 函数。
+
+  function showImportPanel(name) {
+    ['importManualPanel', 'importManyouPanel', 'importApplePanel', 'importSuccessPanel'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.hidden = (id !== name);
+    });
+  }
+
+  function showImportSuccess(message) {
+    var textEl = document.getElementById('importSuccessText');
+    if (textEl) textEl.textContent = message;
+    showImportPanel('importSuccessPanel');
+  }
+
+  // 构建手动输入的 6 行日期输入框
+  function buildManualDateInputs() {
+    var list = document.getElementById('importManualList');
+    if (!list) return;
+    list.innerHTML = '';
+    var labels = ['最近一次', '上一次', '再上一次', '更早一次', '更早两次', '更早三次'];
+    for (var i = 0; i < 6; i++) {
+      var row = document.createElement('div');
+      row.className = 'import-manual-row';
+      var label = document.createElement('label');
+      label.textContent = labels[i];
+      var input = document.createElement('input');
+      input.type = 'date';
+      input.dataset.idx = String(i);
+      row.appendChild(label);
+      row.appendChild(input);
+      list.appendChild(row);
+    }
+  }
+
+  // 齿轮按钮：进入导入页
+  var gearBtn = document.getElementById('gearBtn');
+  if (gearBtn) {
+    gearBtn.addEventListener('click', function () {
+      if (typeof switchTo === 'function') {
+        switchTo('import');
+      }
+      buildManualDateInputs();
+      // 进入时显示选项列表：隐藏所有具体 panel
+      ['importManualPanel', 'importManyouPanel', 'importApplePanel', 'importSuccessPanel'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.hidden = true;
+      });
+    });
+  }
+
+  // 三个选项按钮
+  var importOptionBtns = document.querySelectorAll('.import-option');
+  for (var io = 0; io < importOptionBtns.length; io++) {
+    importOptionBtns[io].addEventListener('click', function () {
+      var source = this.getAttribute('data-source');
+      if (source === 'manual') {
+        showImportPanel('importManualPanel');
+        buildManualDateInputs();
+      } else if (source === 'manyou') {
+        showImportPanel('importManyouPanel');
+      } else if (source === 'apple') {
+        showImportPanel('importApplePanel');
+      }
+    });
+  }
+
+  // 取消按钮（各自返回选项列表）
+  var manualCancel = document.getElementById('importManualCancel');
+  if (manualCancel) manualCancel.addEventListener('click', function () {
+    var el = document.getElementById('importManualPanel');
+    if (el) el.hidden = true;
+  });
+
+  var manyouCancel = document.getElementById('importManyouCancel');
+  if (manyouCancel) manyouCancel.addEventListener('click', function () {
+    var el = document.getElementById('importManyouPanel');
+    if (el) el.hidden = true;
+    var manyouFileInputReset = document.getElementById('importManyouFile');
+    if (manyouFileInputReset) manyouFileInputReset.value = '';
+    var previewReset = document.getElementById('importManyouPreview');
+    if (previewReset) previewReset.textContent = '';
+    var submitReset = document.getElementById('importManyouSubmit');
+    if (submitReset) submitReset.disabled = true;
+  });
+
+  var appleCancel = document.getElementById('importAppleCancel');
+  if (appleCancel) appleCancel.addEventListener('click', function () {
+    var el = document.getElementById('importApplePanel');
+    if (el) el.hidden = true;
+    var appleFileInputReset = document.getElementById('importAppleFile');
+    if (appleFileInputReset) appleFileInputReset.value = '';
+    var previewReset = document.getElementById('importApplePreview');
+    if (previewReset) previewReset.textContent = '';
+    var submitReset = document.getElementById('importAppleSubmit');
+    if (submitReset) submitReset.disabled = true;
+  });
+
+  // 手动提交：逐条调用 addPeriod
+  var manualSubmit = document.getElementById('importManualSubmit');
+  if (manualSubmit) {
+    manualSubmit.addEventListener('click', async function () {
+      var inputs = document.querySelectorAll('#importManualList input[type="date"]');
+      var toSubmit = [];
+      inputs.forEach(function (inp) { if (inp.value) toSubmit.push(inp.value); });
+      if (toSubmit.length === 0) {
+        alert('请至少填写一个日期');
+        return;
+      }
+      manualSubmit.disabled = true;
+      var origText = manualSubmit.textContent;
+      manualSubmit.textContent = '导入中...';
+      var ok = 0, fail = 0;
+      for (var i = 0; i < toSubmit.length; i++) {
+        try {
+          await CB_API.cycle.addPeriod(toSubmit[i], null, null);
+          ok++;
+        } catch (e) {
+          console.warn('导入失败:', e);
+          fail++;
+        }
+      }
+      manualSubmit.disabled = false;
+      manualSubmit.textContent = origText || '提交';
+      showImportSuccess('成功导入 ' + ok + ' 条经期记录' + (fail > 0 ? '，' + fail + ' 条失败' : ''));
+      // 清空表单
+      inputs.forEach(function (inp) { inp.value = ''; });
+      // 刷新首页状态
+      if (typeof loadCycleStatus === 'function') loadCycleStatus();
+    });
+  }
+
+  // 美柚文件选择 + 预览
+  var manyouFileInput = document.getElementById('importManyouFile');
+  if (manyouFileInput) {
+    manyouFileInput.addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        try {
+          var content = JSON.parse(ev.target.result);
+          // 尝试多种格式
+          var periods = content.periods || content.data || content;
+          if (!Array.isArray(periods)) throw new Error('JSON 中没有找到 periods 数组');
+          // 标准化字段名
+          var normalized = periods.map(function (p) {
+            return {
+              start_date: p.start_date || p.startDate || p.start,
+              end_date: p.end_date || p.endDate || p.end || null,
+              flow: p.flow || null
+            };
+          }).filter(function (p) { return p.start_date; });
+          // 预览
+          var preview = document.getElementById('importManyouPreview');
+          if (preview) {
+            preview.textContent = '检测到 ' + normalized.length + ' 条记录:\n' +
+              normalized.slice(0, 5).map(function (p) {
+                return '• ' + p.start_date + (p.end_date ? ' → ' + p.end_date : '');
+              }).join('\n') +
+              (normalized.length > 5 ? '\n... 等 ' + normalized.length + ' 条' : '');
+          }
+          // 暂存
+          manyouFileInput._normalized = normalized;
+          var submit = document.getElementById('importManyouSubmit');
+          if (submit) submit.disabled = normalized.length === 0;
+        } catch (err) {
+          var preview2 = document.getElementById('importManyouPreview');
+          if (preview2) preview2.textContent = '文件解析失败：' + err.message;
+          manyouFileInput._normalized = [];
+          var submit2 = document.getElementById('importManyouSubmit');
+          if (submit2) submit2.disabled = true;
+        }
+      };
+      reader.onerror = function () {
+        var previewErr = document.getElementById('importManyouPreview');
+        if (previewErr) previewErr.textContent = '文件读取失败';
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // 美柚提交
+  var manyouSubmit = document.getElementById('importManyouSubmit');
+  if (manyouSubmit) {
+    manyouSubmit.addEventListener('click', async function () {
+      var data = manyouFileInput && manyouFileInput._normalized ? manyouFileInput._normalized : [];
+      if (data.length === 0) return;
+      manyouSubmit.disabled = true;
+      var origManyouText = manyouSubmit.textContent;
+      manyouSubmit.textContent = '导入中...';
+      try {
+        var res = await CB_API.cycle.importManyou(data);
+        showImportSuccess('成功导入 ' + ((res && res.imported_count) || 0) + ' 条美柚经期数据');
+        // 重置文件
+        if (manyouFileInput) {
+          manyouFileInput.value = '';
+          manyouFileInput._normalized = [];
+        }
+        var previewR = document.getElementById('importManyouPreview');
+        if (previewR) previewR.textContent = '';
+        // 刷新首页状态
+        if (typeof loadCycleStatus === 'function') loadCycleStatus();
+      } catch (e) {
+        alert('导入失败：' + (e && e.message ? e.message : e));
+        manyouSubmit.disabled = false;
+        manyouSubmit.textContent = origManyouText || '导入';
+      }
+    });
+  }
+
+  // Apple Health 文件选择 + 预览
+  var appleFileInput = document.getElementById('importAppleFile');
+  if (appleFileInput) {
+    appleFileInput.addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        try {
+          var content = JSON.parse(ev.target.result);
+          var records = content.records || content.data || content;
+          if (!Array.isArray(records)) throw new Error('JSON 中没有找到 records 数组');
+          var normalized = records.map(function (r) {
+            return {
+              startDate: r.startDate || r.start_date || r.start,
+              endDate: r.endDate || r.end_date || r.end || null,
+              flow: r.flow || null
+            };
+          }).filter(function (r) { return r.startDate; });
+          var preview = document.getElementById('importApplePreview');
+          if (preview) {
+            preview.textContent = '检测到 ' + normalized.length + ' 条记录:\n' +
+              normalized.slice(0, 5).map(function (p) {
+                return '• ' + p.startDate + (p.endDate ? ' → ' + p.endDate : '');
+              }).join('\n') +
+              (normalized.length > 5 ? '\n... 等 ' + normalized.length + ' 条' : '');
+          }
+          appleFileInput._normalized = normalized;
+          var submit = document.getElementById('importAppleSubmit');
+          if (submit) submit.disabled = normalized.length === 0;
+        } catch (err) {
+          var preview2 = document.getElementById('importApplePreview');
+          if (preview2) preview2.textContent = '文件解析失败：' + err.message;
+          appleFileInput._normalized = [];
+          var submit2 = document.getElementById('importAppleSubmit');
+          if (submit2) submit2.disabled = true;
+        }
+      };
+      reader.onerror = function () {
+        var previewErr = document.getElementById('importApplePreview');
+        if (previewErr) previewErr.textContent = '文件读取失败';
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // Apple Health 提交
+  var appleSubmit = document.getElementById('importAppleSubmit');
+  if (appleSubmit) {
+    appleSubmit.addEventListener('click', async function () {
+      var data = appleFileInput && appleFileInput._normalized ? appleFileInput._normalized : [];
+      if (data.length === 0) return;
+      appleSubmit.disabled = true;
+      var origAppleText = appleSubmit.textContent;
+      appleSubmit.textContent = '导入中...';
+      try {
+        var res = await CB_API.cycle.importAppleHealth(data);
+        showImportSuccess('成功导入 ' + ((res && res.imported_count) || 0) + ' 条 Apple Health 数据');
+        if (appleFileInput) {
+          appleFileInput.value = '';
+          appleFileInput._normalized = [];
+        }
+        var previewR = document.getElementById('importApplePreview');
+        if (previewR) previewR.textContent = '';
+        if (typeof loadCycleStatus === 'function') loadCycleStatus();
+      } catch (e) {
+        alert('导入失败：' + (e && e.message ? e.message : e));
+        appleSubmit.disabled = false;
+        appleSubmit.textContent = origAppleText || '导入';
+      }
+    });
+  }
+
+  // 返回首页按钮（data-back="home"）
+  var backHomeBtns = document.querySelectorAll('[data-back="home"]');
+  for (var bh = 0; bh < backHomeBtns.length; bh++) {
+    backHomeBtns[bh].addEventListener('click', function () {
+      if (typeof switchTo === 'function') switchTo('home');
+      // 同时刷新首页 cycle-status
+      if (typeof loadCycleStatus === 'function') loadCycleStatus();
+    });
+  }
+
+  // ====== 登录/注册交互（与 CB_API.auth.* 配合） ======
+
+  // 切换登录/注册模式
+  var authToggle = document.getElementById('authToggle');
+  if (authToggle) {
+    authToggle.addEventListener('click', function () {
+      isRegisterMode = !isRegisterMode;
+      updateAuthMode();
+    });
+  }
+
+  // 表单提交（登录或注册）
+  var authForm = document.getElementById('authForm');
+  if (authForm) {
+    authForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      showAuthError('');
+
+      var emailEl = document.getElementById('authEmail');
+      var passEl = document.getElementById('authPassword');
+      var nickEl = document.getElementById('authNickname');
+      var submitBtn = document.getElementById('authSubmit');
+
+      var email = (emailEl && emailEl.value || '').trim();
+      var password = (passEl && passEl.value || '').trim();
+      var nickname = (nickEl && nickEl.value || '').trim();
+
+      if (!email) { showAuthError('请输入邮箱'); return; }
+      if (!password || password.length < 4) { showAuthError('密码至少 4 位'); return; }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = isRegisterMode ? '注册中...' : '登录中...';
+      }
+
+      try {
+        var data = isRegisterMode
+          ? await CB_API.auth.register(email, password, nickname)
+          : await CB_API.auth.login(email, password);
+
+        // 登录/注册成功：切换到正常模式
+        isDemoMode = false;
+        refreshDemoBar();
+
+        // 登录/注册成功：隐藏登录页，回到首页
+        var loginPill = document.getElementById('loginPill');
+        if (loginPill) loginPill.hidden = true;
+        if (typeof switchTo === 'function') switchTo('home');
+        // 刷新首页数据
+        if (typeof loadCycleStatus === 'function') loadCycleStatus();
+        // 重置表单
+        emailEl.value = '';
+        passEl.value = '';
+        if (nickEl) nickEl.value = '';
+        isRegisterMode = false;
+        updateAuthMode();
+      } catch (err) {
+        showAuthError(err.message || '操作失败，请重试');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = isRegisterMode ? '注册' : '登录';
+        }
+      }
+    });
+  }
+
+  // 首页登录提示 → 进入登录页
+  var loginPill = document.getElementById('loginPill');
+  if (loginPill) {
+    loginPill.addEventListener('click', function () {
+      isRegisterMode = false;
+      updateAuthMode();
+      if (typeof switchTo === 'function') switchTo('auth');
+    });
+  }
+
+  // 启动时检查登录状态
+  (async function initAuthState() {
+    if (!window.CB_API || !CB_API.auth) return;
+    if (!CB_API.auth.isLoggedIn()) {
+      // 未登录：自动切到登录页（除非是 demo 模式）
+      if (!isDemoMode && !authAutoSwitched && typeof switchTo === 'function') {
+        authAutoSwitched = true;
+        switchTo('auth');
+      }
+      return;
+    }
+    // 已登录：验证 token 是否有效
+    try {
+      await CB_API.auth.me();
+      // 已登录：若当前在 auth 页，切回 home
+      var authScreen = document.querySelector('.screen.screen-auth');
+      if (authScreen && authScreen.classList.contains('active') && typeof switchTo === 'function') {
+        switchTo('home');
+      }
+    } catch (e) {
+      // token 无效，清除并切登录页
+      CB_API.auth.logout();
+      if (!isDemoMode && typeof switchTo === 'function') {
+        switchTo('auth');
+      }
+    }
+  })();
+
+  // ====== 初始化：根据模式显示/隐藏 demo bar ======
+  refreshDemoBar();
+
+  // 演示模式 bar 的登录按钮：跳到登录页
+  var demoLoginBtn = document.getElementById('demoBarLoginBtn');
+  if (demoLoginBtn) {
+    demoLoginBtn.addEventListener('click', function () {
+      if (typeof switchTo === 'function') switchTo('auth');
+    });
+  }
+
+  // 登录页"演示模式"按钮
+  var authDemoBtn = document.getElementById('authDemoBtn');
+  if (authDemoBtn) {
+    authDemoBtn.addEventListener('click', function () {
+      // 进入演示模式
+      isDemoMode = true;
+      refreshDemoBar(); // 同时显示 demo-bar 和 loginPill
+      if (typeof switchTo === 'function') switchTo('home');
+      if (typeof loadCycleStatus === 'function') loadCycleStatus();
+    });
   }
 
 })();
