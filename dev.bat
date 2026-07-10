@@ -65,7 +65,7 @@ if not errorlevel 1 (
     echo.
     echo 请选择:
     echo   [1] 自动关闭占用进程后继续
-    echo   [2] 退出并修改本脚本第 12 行 PORT=XXXX 换端口
+    echo   [2] 退出并修改本脚本第 13 行 PORT=XXXX 换端口
     echo.
     set /p "CHOICE=请输入 (1 或 2): "
     if "!CHOICE!"=="1" (
@@ -75,7 +75,7 @@ if not errorlevel 1 (
         )
         timeout /t 2 >nul
     ) else (
-        echo 已取消。请编辑 dev.bat 第 12 行修改 PORT。
+        echo 已取消。请编辑 dev.bat 第 13 行修改 PORT。
         echo.
         pause
         exit /b 1
