@@ -705,6 +705,68 @@
 
   // ====== 数据加载（接后端 API）======
   // 仅替换硬编码数据来源，不改视觉。失败时保留原 HTML 兜底。
+
+  // 后端 Memory → 本地 bubbleDNA.memory 格式转换
+  function backendMemoryToLocal(m) {
+    var text = m.raw_text || "";
+    return {
+      id: "remote_" + m.id,
+      remoteId: m.id,
+      time: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+      timeLabel: formatTimeLabel(m.created_at),
+      rawText: text,
+      snippet: text.length > 50 ? text.substring(0, 50) + "……" : text,
+      themes: m.themes || [],
+      triggers: m.triggers || [],
+      recovery: m.recovery || [],
+      emotions: (m.emotions || []).map(function (e) { return e.name || e; }),
+      mood: m.mood || "未明",
+      expressionStyle: "倾诉",
+      hasAction: false,
+      source: "backend"
+    };
+  }
+
+  function formatTimeLabel(iso) {
+    if (!iso) return "今天";
+    try {
+      var d = new Date(iso);
+      var now = new Date();
+      var diffDays = Math.floor((now - d) / 86400000);
+      if (diffDays === 0) return "今天";
+      if (diffDays === 1) return "昨天";
+      if (diffDays < 7) return diffDays + "天前";
+      if (diffDays < 30) return Math.floor(diffDays / 7) + "周前";
+      if (diffDays < 365) return Math.floor(diffDays / 30) + "个月前";
+      return Math.floor(diffDays / 365) + "年前";
+    } catch (e) {
+      return "今天";
+    }
+  }
+
+  // 从后端拉取真实记忆，覆盖本地 bubbleDNA.memories
+  async function loadMemoriesFromBackend() {
+    if (!window.CB_API || !CB_API.memory || !CB_API.memory.list) return null;
+    try {
+      var resp = await CB_API.memory.list(50, 0);
+      var items = (resp && resp.memories) ? resp.memories : [];
+      // 按时间正序（旧→新），与本地约定一致
+      items.sort(function (a, b) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+      var localMemories = items.map(backendMemoryToLocal);
+      bubbleDNA.memories = localMemories;
+      bubbleDNA.totalRecords = localMemories.length;
+      bubbleDNA._patternsCache = null;
+      bubbleDNA._patternsCacheVersion++;
+      saveDNA();
+      return localMemories;
+    } catch (e) {
+      console.warn("加载记忆失败:", e);
+      return null;
+    }
+  }
+
   async function loadCycleStatus() {
     // 演示模式：使用硬编码
     if (isDemoMode) {
@@ -1132,6 +1194,12 @@
       var accompanied = (data.impact.accompanied_count != null) ? data.impact.accompanied_count : (3 + bubbleDNA.totalResponses);
       var impactSub = impactText.parentNode.querySelector(".impact-sub");
       impactText.innerHTML = "你的经历，陪伴了 <strong>" + accompanied + " 位</strong>正在经历相似感受的人。";
+    }
+
+    // 填充"今天还有 N 位处于相似阶段"占位（来自后端 impact.similar_phase_count）
+    var similarEl = document.getElementById('similarPhaseCount');
+    if (similarEl && data.impact && data.impact.similar_phase_count != null) {
+      similarEl.textContent = data.impact.similar_phase_count + ' 位';
     }
   }
 
@@ -1898,6 +1966,22 @@
         isDemoMode = false;
         refreshDemoBar();
 
+        // 登录/注册成功：清掉本地 demo 种子记忆 + 从后端拉真实数据
+        try {
+          localStorage.removeItem('bubbleReset_v6');
+          bubbleDNA.memories = [];
+          bubbleDNA.totalRecords = 0;
+          bubbleDNA.totalResponses = 0;
+          bubbleDNA.relationshipSignals = [];
+          bubbleDNA.communitySignals = [];
+          bubbleDNA.evolution = [];
+          bubbleDNA._patternsCache = null;
+          bubbleDNA._patternsCacheVersion++;
+          await loadMemoriesFromBackend();
+        } catch (e) {
+          console.warn('加载真实记忆失败:', e);
+        }
+
         // 登录/注册成功：隐藏登录页，回到首页
         var loginPill = document.getElementById('loginPill');
         if (loginPill) loginPill.hidden = true;
@@ -1945,6 +2029,22 @@
     // 已登录：验证 token 是否有效
     try {
       await CB_API.auth.me();
+      // 已登录：清掉本地 demo 种子 + 从后端加载真实 memories
+      // （登录用户不该看到"三个月前、两个月前"这种种子文案）
+      try {
+        localStorage.removeItem('bubbleReset_v6'); // 解除种子注入限制
+        bubbleDNA.memories = [];
+        bubbleDNA.totalRecords = 0;
+        bubbleDNA.totalResponses = 0;
+        bubbleDNA.relationshipSignals = [];
+        bubbleDNA.communitySignals = [];
+        bubbleDNA.evolution = [];
+        bubbleDNA._patternsCache = null;
+        bubbleDNA._patternsCacheVersion++;
+        await loadMemoriesFromBackend();
+      } catch (e) {
+        console.warn('加载真实记忆失败，保持空状态:', e);
+      }
       // 已登录：若当前在 auth 页，切回 home
       var authScreen = document.querySelector('.screen.screen-auth');
       if (authScreen && authScreen.classList.contains('active') && typeof switchTo === 'function') {
