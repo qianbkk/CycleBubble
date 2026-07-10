@@ -184,16 +184,19 @@
     try { return new URLSearchParams(window.location.search); }
     catch (e) { return null; }
   })();
-  var forceDemo = urlParams && urlParams.get('demo') === '1';
+  // 移除 ?demo=1：演示模式仅由用户主动从登录页点击触发
   var forceApp = urlParams && urlParams.get('mode') === 'app';
-  var isDemoMode = forceDemo || (!forceApp && !(window.CB_API && CB_API.auth && CB_API.auth.isLoggedIn && CB_API.auth.isLoggedIn()));
+  var isDemoMode = false;
+  var authAutoSwitched = false; // 防止 initAuthState 重复切屏
 
   function isAppMode() { return !isDemoMode; }
 
   function refreshDemoBar() {
     var bar = document.getElementById('demoBar');
-    if (!bar) return;
-    bar.hidden = !isDemoMode;
+    var pill = document.getElementById('loginPill');
+    if (bar) bar.hidden = !isDemoMode;
+    // loginPill 仅在 demo 模式下显示，作为"想用完整功能"的入口
+    if (pill) pill.hidden = !isDemoMode;
   }
 
   function showDemoToast(message) {
@@ -1932,24 +1935,27 @@
   (async function initAuthState() {
     if (!window.CB_API || !CB_API.auth) return;
     if (!CB_API.auth.isLoggedIn()) {
-      // 未登录：显示登录提示
-      var loginPill = document.getElementById('loginPill');
-      if (loginPill) loginPill.hidden = false;
+      // 未登录：自动切到登录页（除非是 demo 模式）
+      if (!isDemoMode && !authAutoSwitched && typeof switchTo === 'function') {
+        authAutoSwitched = true;
+        switchTo('auth');
+      }
       return;
     }
     // 已登录：验证 token 是否有效
     try {
       await CB_API.auth.me();
-      var loginPill2 = document.getElementById('loginPill');
-      if (loginPill2) loginPill2.hidden = true;
+      // 已登录：若当前在 auth 页，切回 home
+      var authScreen = document.querySelector('.screen.screen-auth');
+      if (authScreen && authScreen.classList.contains('active') && typeof switchTo === 'function') {
+        switchTo('home');
+      }
     } catch (e) {
-      // token 无效，清除并显示提示
+      // token 无效，清除并切登录页
       CB_API.auth.logout();
-      // 登出后回到演示模式
-      isDemoMode = true;
-      refreshDemoBar();
-      var loginPill3 = document.getElementById('loginPill');
-      if (loginPill3) loginPill3.hidden = false;
+      if (!isDemoMode && typeof switchTo === 'function') {
+        switchTo('auth');
+      }
     }
   })();
 
@@ -1964,18 +1970,15 @@
     });
   }
 
-  // 登录页"先看看 demo"按钮
+  // 登录页"演示模式"按钮
   var authDemoBtn = document.getElementById('authDemoBtn');
   if (authDemoBtn) {
     authDemoBtn.addEventListener('click', function () {
-      // 切到演示模式 + 显示 demo-bar + 回到首页
+      // 进入演示模式
       isDemoMode = true;
-      refreshDemoBar();
+      refreshDemoBar(); // 同时显示 demo-bar 和 loginPill
       if (typeof switchTo === 'function') switchTo('home');
       if (typeof loadCycleStatus === 'function') loadCycleStatus();
-      // 隐藏登录提示 pill
-      var pill = document.getElementById('loginPill');
-      if (pill) pill.hidden = true;
     });
   }
 
