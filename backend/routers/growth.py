@@ -40,6 +40,12 @@ def get_growth(
 
     n = len(memories)
 
+    # 相似阶段人数：当前可见的公开记忆总数（共鸣流就是这些）
+    public_total = session.exec(
+        select(Memory).where(Memory.is_public == True, Memory.user_id != current_user.id)
+    ).all()
+    similar_phase_count = len(public_total)
+
     # 如果没有任何记忆，返回空状态标识
     if n == 0:
         return {
@@ -49,7 +55,8 @@ def get_growth(
             "discoveries": [],
             "impact": {
                 "accompanied_count": 0,
-                "first_recorder_count": 0
+                "first_recorder_count": 0,
+                "similar_phase_count": similar_phase_count
             }
         }
 
@@ -118,6 +125,7 @@ def get_growth(
         "discoveries": discoveries,
         "impact": {
             "accompanied_count": accompanied_count,
-            "response_count": len(my_responses)
+            "response_count": len(my_responses),
+            "similar_phase_count": similar_phase_count
         }
     }
