@@ -718,24 +718,35 @@
     // 演示/真实模式都通过 API 拿，后端根据 X-Demo-Mode header 自动切库
     // demo 模式：cyclebubble_demo.db 已有种子经期 → 返回 phase=排卵期等
     // 真实模式：cyclebubble.db 没有经期 → confidence=none，文案空
+    var phaseEl = document.getElementById("bubblePhase");
+    var hintEl = document.getElementById("bubbleHint");
+    var statusEl = document.getElementById("cycleStatus");
+    var resetToPlaceholder = function () {
+      if (phaseEl) phaseEl.textContent = "–";
+      if (hintEl) hintEl.textContent = "Bubble 在慢慢认识你";
+      if (statusEl) statusEl.textContent = "Bubble 正在了解你的节奏";
+    };
+    if (!window.CB_API || !window.CB_API.cycle || !window.CB_API.cycle.getStatus) {
+      resetToPlaceholder();
+      return;
+    }
     try {
-      if (!window.CB_API || !window.CB_API.cycle || !window.CB_API.cycle.getStatus) return;
       const status = await window.CB_API.cycle.getStatus();
-      if (!status || !status.phase_name) return;
+      if (!status || !status.phase_name || status.confidence === "none" || status.phase === "unknown") {
+        resetToPlaceholder();
+        return;
+      }
       const text = status.phase_name + "｜" + (status.description || "");
       const confidence = status.confidence;
       let suffix = "";
       if (confidence === "low") suffix = "（估算）";
       else if (confidence === "medium") suffix = "（预测中）";
-      else if (confidence === "none") suffix = "";
-      const el = document.getElementById("cycleStatus");
-      if (el) el.textContent = text + suffix;
-
-      // 同步更新主泡泡上的 phase 标签和提示（如果后端返回了）
-      const phaseEl = document.getElementById("bubblePhase");
-      if (phaseEl && status.phase_name) phaseEl.textContent = status.phase_name;
+      if (statusEl) statusEl.textContent = text + suffix;
+      if (phaseEl) phaseEl.textContent = status.phase_name;
+      if (hintEl) hintEl.textContent = status.description || "Bubble 在慢慢认识你";
     } catch (e) {
       console.warn("加载周期状态失败:", e);
+      resetToPlaceholder();
     }
   }
 
@@ -1419,7 +1430,27 @@
   }
 
   // ====== 页面切换 ======
+  function isUserLoggedIn() {
+    return !!(window.CB_API && CB_API.auth && CB_API.auth.isLoggedIn && CB_API.auth.isLoggedIn());
+  }
+
+  // 未登录时允许停留/进入的页面
+  var PUBLIC_SCREENS = {
+    auth: true,
+    home: true
+  };
+
+  // 未登录时统一把目标页改写为登录页，避免被任何入口绕过。
+  function guardRoute(name) {
+    if (!name) return 'auth';
+    if (isDemoMode) return name; // 演示模式不拦截
+    if (isUserLoggedIn()) return name;
+    if (PUBLIC_SCREENS[name]) return name;
+    return 'auth';
+  }
+
   function switchTo(name) {
+    name = guardRoute(name);
     var screens = document.querySelectorAll(".screen");
     for (var i = 0; i < screens.length; i++) screens[i].classList.remove("active");
     var target = document.querySelector('.screen[data-screen="' + name + '"]');
