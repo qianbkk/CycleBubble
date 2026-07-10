@@ -178,6 +178,148 @@
     bubbleDNA.totalRecords = seedMemories.length;
   }
 
+  // ====== 模式管理：演示 / 正常 ======
+  // 通过 URL 参数可强制：?demo=1 强制演示，?mode=app 强制正常
+  var urlParams = (function () {
+    try { return new URLSearchParams(window.location.search); }
+    catch (e) { return null; }
+  })();
+  var forceDemo = urlParams && urlParams.get('demo') === '1';
+  var forceApp = urlParams && urlParams.get('mode') === 'app';
+  var isDemoMode = forceDemo || (!forceApp && !(window.CB_API && CB_API.auth && CB_API.auth.isLoggedIn && CB_API.auth.isLoggedIn()));
+
+  function isAppMode() { return !isDemoMode; }
+
+  function refreshDemoBar() {
+    var bar = document.getElementById('demoBar');
+    if (!bar) return;
+    bar.hidden = !isDemoMode;
+  }
+
+  function showDemoToast(message) {
+    var existing = document.getElementById('demoToast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.id = 'demoToast';
+    toast.className = 'demo-toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.classList.add('demo-toast--show'); }, 10);
+    setTimeout(function () {
+      toast.classList.remove('demo-toast--show');
+      setTimeout(function () { toast.remove(); }, 300);
+    }, 2500);
+  }
+
+  // ====== 演示模式种子数据 ======
+  var demoStories = [
+    {
+      id: 'demo-1',
+      anonymous_name: '一位相似经历的人',
+      text_excerpt: '这个月我又开始反复想那件事了，好像每个月都会有一周是这样……',
+      themes: ['自我'],
+      mood: '难过',
+      days_ago: 2
+    },
+    {
+      id: 'demo-2',
+      anonymous_name: '一位相似经历的人',
+      text_excerpt: '今天朋友说她也是这样，她找到的方法是写下来，我也想试试……',
+      themes: ['关系'],
+      mood: '平静',
+      days_ago: 5
+    },
+    {
+      id: 'demo-3',
+      anonymous_name: '一位相似经历的人',
+      text_excerpt: '以前会觉得自己太敏感了，现在开始觉得也许只是这个阶段的正常反应……',
+      themes: ['自我'],
+      mood: '平静',
+      days_ago: 9
+    }
+  ];
+
+  var demoGrowthStories = [
+    {
+      text: '这两段话是不同时期留下的。',
+      tag: '表达方式',
+      quotes: [
+        { text: '我是不是太敏感了？', time: '三个月前' },
+        { text: '好像在意的是自己有没有被认可。', time: '两周前' }
+      ]
+    },
+    {
+      text: '最近你提到了两次"朋友"。',
+      tag: '关系',
+      quotes: [
+        { text: '和朋友聊了之后好多了。', time: '两个月前' },
+        { text: '今天主动说出了自己的想法。', time: '一周前' }
+      ]
+    }
+  ];
+
+  // ====== 援助 modal 触发逻辑 ======
+  function showCrisisModal(resources) {
+    var modal = document.getElementById('crisisModal');
+    var list = document.getElementById('crisisResources');
+    if (!modal || !list) return;
+
+    // 渲染资源列表
+    list.innerHTML = '';
+    if (!resources || resources.length === 0) {
+      // 后端没有传 resources，用硬编码兜底
+      resources = [
+        { name: '全国心理援助热线', phone: '400-161-9995', hours: '24h', type: 'phone' },
+        { name: '北京心理危机研究与干预中心', phone: '010-82951332', hours: '24h', type: 'phone' },
+        { name: '希望24热线', phone: '400-161-9995', hours: '24h', type: 'phone' },
+        { name: '简单心理', url: 'https://www.simplecare.cn', type: 'online' }
+      ];
+    }
+
+    resources.forEach(function (r) {
+      var item = document.createElement('div');
+      item.className = 'crisis-resource';
+
+      var icon = document.createElement('div');
+      icon.className = 'crisis-resource-icon';
+      icon.textContent = r.type === 'online' ? '✦' : '☎';
+
+      var body = document.createElement('div');
+      body.className = 'crisis-resource-body';
+
+      var name = document.createElement('div');
+      name.className = 'crisis-resource-name';
+      name.textContent = r.name;
+
+      var detail = document.createElement('div');
+      detail.className = 'crisis-resource-detail';
+      if (r.phone) {
+        detail.innerHTML = '<a href="tel:' + r.phone + '">' + r.phone + '</a>' + (r.hours ? ' · ' + r.hours : '');
+      } else if (r.url) {
+        detail.innerHTML = '<a href="' + r.url + '" target="_blank" rel="noopener">' + r.url + '</a>';
+      }
+
+      body.appendChild(name);
+      body.appendChild(detail);
+      item.appendChild(icon);
+      item.appendChild(body);
+      list.appendChild(item);
+    });
+
+    modal.hidden = false;
+  }
+
+  function hideCrisisModal() {
+    var modal = document.getElementById('crisisModal');
+    if (modal) modal.hidden = true;
+  }
+
+  // 关闭按钮
+  var crisisCloseBtn = document.getElementById('crisisCloseBtn');
+  if (crisisCloseBtn) crisisCloseBtn.addEventListener('click', hideCrisisModal);
+  var crisisDismissBtn = document.getElementById('crisisDismissBtn');
+  if (crisisDismissBtn) crisisDismissBtn.addEventListener('click', hideCrisisModal);
+
   // ====== Pattern 聚合层 ======
   // 从 memories 动态计算 Pattern，不存储。
   // AI 只能调用已存在的 Pattern，不能创造不存在的 Pattern。
@@ -561,6 +703,12 @@
   // ====== 数据加载（接后端 API）======
   // 仅替换硬编码数据来源，不改视觉。失败时保留原 HTML 兜底。
   async function loadCycleStatus() {
+    // 演示模式：使用硬编码
+    if (isDemoMode) {
+      var el = document.getElementById('cycleStatus');
+      if (el) el.textContent = '黄体期｜今天身体可能比平时更容易放大情绪感受';
+      return;
+    }
     try {
       if (!window.CB_API || !window.CB_API.cycle || !window.CB_API.cycle.getStatus) return;
       const status = await window.CB_API.cycle.getStatus();
@@ -584,6 +732,26 @@
   }
 
   async function loadGrowthData() {
+    // 演示模式：返回种子数据
+    if (isDemoMode) {
+      return {
+        total_records: 5,
+        empty_state: false,
+        timeline: [
+          { week: '2026-W28', count: 2, first_text: '这个阶段又到了...' },
+          { week: '2026-W26', count: 1, first_text: '今天又因为...' },
+          { week: '2026-W24', count: 2, first_text: '和朋友聊了之后...' }
+        ],
+        discoveries: [
+          { type: 'mood', title: '最近的主导情绪', content: '难过', evidence_count: 2 },
+          { type: 'theme', title: '最常出现的感受主题', content: '自我', evidence_count: 3 }
+        ],
+        impact: { accompanied_count: 5, response_count: 2 },
+        isDemo: true,
+        demoStories: demoGrowthStories
+      };
+    }
+    // 正常模式：从 API 获取
     try {
       if (!window.CB_API || !window.CB_API.growth || !window.CB_API.growth.get) return null;
       const data = await window.CB_API.growth.get();
@@ -595,6 +763,11 @@
   }
 
   async function loadResonanceFeed() {
+    // 演示模式：返回种子共鸣故事
+    if (isDemoMode) {
+      return demoStories;
+    }
+    // 正常模式：从 API 获取
     try {
       if (!window.CB_API || !window.CB_API.resonance || !window.CB_API.resonance.getFeed) return [];
       const data = await window.CB_API.resonance.getFeed(10);
@@ -1090,6 +1263,12 @@
 
   if (saveBtn) {
     saveBtn.addEventListener("click", function () {
+      // 演示模式拦截：弹 toast 提示但不保存
+      if (isDemoMode) {
+        showDemoToast('演示模式无法保存，登录后可以记录你的真实情绪');
+        return;
+      }
+
       var userInput = "";
       if (recordInput && recordInput.value.trim()) {
         userInput = recordInput.value.trim();
@@ -1712,6 +1891,10 @@
           ? await CB_API.auth.register(email, password, nickname)
           : await CB_API.auth.login(email, password);
 
+        // 登录/注册成功：切换到正常模式
+        isDemoMode = false;
+        refreshDemoBar();
+
         // 登录/注册成功：隐藏登录页，回到首页
         var loginPill = document.getElementById('loginPill');
         if (loginPill) loginPill.hidden = true;
@@ -1762,9 +1945,23 @@
     } catch (e) {
       // token 无效，清除并显示提示
       CB_API.auth.logout();
+      // 登出后回到演示模式
+      isDemoMode = true;
+      refreshDemoBar();
       var loginPill3 = document.getElementById('loginPill');
       if (loginPill3) loginPill3.hidden = false;
     }
   })();
+
+  // ====== 初始化：根据模式显示/隐藏 demo bar ======
+  refreshDemoBar();
+
+  // 演示模式 bar 的登录按钮：跳到登录页
+  var demoLoginBtn = document.getElementById('demoBarLoginBtn');
+  if (demoLoginBtn) {
+    demoLoginBtn.addEventListener('click', function () {
+      if (typeof switchTo === 'function') switchTo('auth');
+    });
+  }
 
 })();

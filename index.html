@@ -9,6 +9,15 @@
   <script src="./api.js?v=20260710a"></script>
 </head>
 <body>
+  <!-- ====== 演示模式 bar ====== -->
+  <div class="demo-bar" id="demoBar" hidden>
+    <span class="demo-bar-text">
+      <span class="demo-bar-icon" aria-hidden="true">✦</span>
+      这是演示版本 · 登录后使用完整功能
+    </span>
+    <button class="demo-bar-btn" type="button" id="demoBarLoginBtn">登录 / 注册</button>
+  </div>
+
   <main class="phone-frame" aria-label="CycleBubble">
     <div class="phone-screen" id="phone">
 
@@ -380,6 +389,22 @@
       <p>如果情绪长期困扰你，记得也找专业人士聊聊。</p>
       <button class="about-close" type="button" id="aboutClose">嗯</button>
       <button class="about-reset" type="button" id="aboutReset" onclick="window.__bubbleReset && window.__bubbleReset()">重新开始</button>
+    </div>
+  </div>
+
+  <!-- ====== 援助资源 modal ====== -->
+  <div class="crisis-modal" id="crisisModal" hidden>
+    <div class="crisis-modal-card" role="dialog" aria-labelledby="crisisTitle">
+      <div class="crisis-modal-icon" aria-hidden="true"></div>
+      <h3 class="crisis-modal-title" id="crisisTitle">如果你需要，有人愿意陪你说话</h3>
+      <p class="crisis-modal-subtitle">这些时刻不好独自消化。下面的号码 24 小时都能打通。</p>
+
+      <div class="crisis-resources" id="crisisResources">
+        <!-- 由 JS 动态填充 -->
+      </div>
+
+      <button class="btn-primary btn-block" type="button" id="crisisCloseBtn">我知道了</button>
+      <button class="btn-link" type="button" id="crisisDismissBtn">收起</button>
     </div>
   </div>
 
