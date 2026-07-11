@@ -61,7 +61,7 @@ demo_engine = _make_engine(demo_database_url)
 
 
 def init_db(target: str = "real"):
-    """创建表。
+    """创建表 + 列迁移。
 
     target:
       - "real"   只初始化真实库
@@ -72,8 +72,26 @@ def init_db(target: str = "real"):
 
     if target in ("real", "both"):
         SQLModel.metadata.create_all(real_engine)
+        _apply_column_migrations(real_engine)
     if target in ("demo", "both"):
         SQLModel.metadata.create_all(demo_engine)
+        _apply_column_migrations(demo_engine)
+
+
+def _apply_column_migrations(engine) -> None:
+    """SQLite 增量列迁移：仅添加新列（IF NOT EXISTS），不动数据。"""
+    try:
+        with engine.connect() as conn:
+            from sqlalchemy import text
+            # memory.is_sensitive
+            cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(memory)").fetchall()]
+            if "is_sensitive" not in cols:
+                conn.exec_driver_sql("ALTER TABLE memory ADD COLUMN is_sensitive BOOLEAN NOT NULL DEFAULT 0")
+                conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_memory_is_sensitive ON memory(is_sensitive)")
+                conn.commit()
+    except Exception:
+        # 列迁移失败不影响主流程；下一轮会重试
+        pass
 
 
 def _is_demo_request(request: Request) -> bool:

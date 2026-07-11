@@ -37,6 +37,7 @@ class Memory(SQLModel, table=True):
     emotions: str = Field(default="[]", max_length=500)  # JSON array of {name, intensity}
     mood: str = Field(default="", max_length=50)
     is_public: bool = Field(default=False, index=True)
+    is_sensitive: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
     user: Optional[User] = Relationship(back_populates="memories")
@@ -62,4 +63,54 @@ class Report(SQLModel, table=True):
     reason: str = Field(max_length=30)  # spam/harassment/self_harm_concern/other
     note: Optional[str] = Field(default=None, max_length=500)
     status: str = Field(default="open", max_length=20)  # open/reviewed/dismissed
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class AdminSetting(SQLModel, table=True):
+    """管理员设置键值表
+
+    key: 配置项
+    value: 配置值（字符串）
+    updated_at: 修改时间
+    updated_by: 修改者（admin username）
+    """
+    __tablename__ = "admin_setting"
+    key: str = Field(primary_key=True, max_length=64)
+    value: str = Field(max_length=2000)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_by: str = Field(default="", max_length=64)
+
+
+class AdminLoginAttempt(SQLModel, table=True):
+    """管理员登录尝试事件表（纯事件，无聚合字段）"""
+    __tablename__ = "admin_login_attempt"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(index=True, max_length=64)
+    ip: str = Field(index=True, max_length=64)
+    success: bool = Field(default=False)
+    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class AdminAudit(SQLModel, table=True):
+    """管理员操作审计日志"""
+    __tablename__ = "admin_audit"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    admin_username: str = Field(index=True, max_length=64)
+    action: str = Field(max_length=64)
+    target: str = Field(max_length=128)
+    ip: str = Field(max_length=64)
+    ua: str = Field(max_length=256)
+    reason: Optional[str] = Field(default=None, max_length=500)
+    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class AdminMemoryAccessToken(SQLModel, table=True):
+    """一次性记忆访问令牌（管理员审计）"""
+    __tablename__ = "admin_memory_access_token"
+    id: str = Field(primary_key=True, max_length=64)  # uuid
+    admin_username: str = Field(index=True, max_length=64)
+    memory_id: int = Field(foreign_key="memory.id", index=True)
+    reason: str = Field(max_length=500)
+    expires_at: datetime = Field(index=True)
+    used_at: Optional[datetime] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)

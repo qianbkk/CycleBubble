@@ -65,17 +65,45 @@ class Settings(BaseSettings):
             )
         return v
 
+    # AI 提供商配置
+    ai_default_provider: str = "minimax"
+    ai_default_model_minimax: str = "M3"
+    ai_default_model_deepseek: str = "v4-flash"
+    ai_request_timeout_seconds: int = 8
+
+    # 管理员配置
+    admin_username: str = "admin"
+    admin_password: str = ""
+    admin_jwt_secret: str = ""
+    admin_jwt_expire_hours: int = 4
+    admin_login_max_fails: int = 5
+    admin_login_lock_minutes: int = 15
+
     class Config:
         env_prefix = "CB_"
         env_file = ".env"
+
+    @field_validator("admin_password")
+    @classmethod
+    def _validate_admin_password(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError(
+                "CB_ADMIN_PASSWORD 不能为空。\n"
+                "请设置一个强随机密码（至少 16 字符）。\n"
+                "生成方式：python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+            )
+        if len(v.strip()) < 16:
+            raise ValueError(
+                "CB_ADMIN_PASSWORD 长度至少 16 个字符。"
+            )
+        return v
 
 
 def _build_settings() -> Settings:
     """构造 Settings，缺失/无效时给出友好提示"""
     try:
-        return Settings()
+        s = Settings()
     except Exception as e:
-        # 在日志中打印后重新抛出，避免直接暴露内部堆栈细节
         msg = str(e)
         if "jwt_secret" in msg.lower() or "JWT_SECRET" in msg:
             raise RuntimeError(
@@ -86,7 +114,19 @@ def _build_settings() -> Settings:
                 "   生成方式：\n"
                 "     python -c \"import secrets; print(secrets.token_urlsafe(48))\"\n"
             ) from e
+        if "admin_password" in msg.lower() or "ADMIN_PASSWORD" in msg:
+            raise RuntimeError(
+                "\n\n❌ CycleBubble 启动失败：管理员密码配置无效。\n"
+                "   请设置 CB_ADMIN_PASSWORD（至少 16 字符）。\n"
+                "   生成方式：\n"
+                "     python -c \"import secrets; print(secrets.token_urlsafe(48))\"\n"
+            ) from e
         raise
+
+    # admin_jwt_secret 默认派生：dev 模式用 jwt_secret + "::admin"
+    if not s.admin_jwt_secret:
+        s.admin_jwt_secret = s.jwt_secret + "::admin"
+    return s
 
 
 settings = _build_settings()
