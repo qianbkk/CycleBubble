@@ -31,13 +31,40 @@
 - 启动时若 `AdminSetting` 表无当前供应商的 Key 记录，把 env 值写入一次（DB 是动态源，env 是默认种子）。
 - Key 长度 ≥ 16 字符，PUT `/admin/ai/settings` 时校验。
 
+#### B.2.1 两个独立开关（避免混用）
+
+`AdminSetting` 表必须以两个独立键存储，文案/UI/实现都不能混用：
+
+- `enable_third_party_ai`：是否调用 MiniMax / DeepSeek。
+  - `false` 表示完全不上传原始文本到第三方供应商。
+  - `false` 时仅走关键词降级（前提是 `enable_keyword_fallback`）。
+- `enable_keyword_fallback`：第三方 AI 失败时是否允许关键词降级。
+  - 仅在 `enable_third_party_ai=true` 时生效。
+  - `false` 时 AI 失败返回 `503`。
+
+判断优先级（伪代码）：
+
+```
+if not enable_third_party_ai:
+    use_keyword_only()                  # 完全不调用第三方
+elif ai_call_succeeded:
+    use_ai_result()
+elif enable_keyword_fallback:
+    use_keyword_only()
+else:
+    return 503
+```
+
+- 安全网 `safety.py` 不受这两个开关影响：始终执行。
+- 隐私披露文案必须显式标注这两个开关的区别。
+
 #### B.3 危机检测路径完全独立（最关键）
 
 - `backend/services/safety.py` 仍是危机检测第一道闸门。约束：**纯本地同步、无外部依赖、优先级最高**。
 - AI 提取路径**完全不再做危机判断**，仅输出 `themes / triggers / recovery / emotions / mood / is_sensitive`，不返回 `risk_level`。
 - 保存记忆流程：`safety.py` 同步命中 → 立即弹援助 modal，不等 AI；AI 仅做情绪结构化分析，失败/超时降级到关键词；`is_sensitive` 用于把记忆标记为不进入共鸣 feed。
 - **AI 降级开关不影响 safety.py**——无论 ON 还是 OFF，安全网始终开启。
-- 验收指标：safety.py 检测路径本地响应 < 50ms（在 CI 上断言）。
+- 验收指标：safety.py 检测路径本地响应 **目标**：本地同步路径应明显快于 AI 路径；在单机测试环境下通常应低于 50ms。CI 不做硬断言，仅做相对断言（本地 < 8s AI 超时上限的 1%）。
 
 #### B.4 `is_sensitive` 优先级（写死）
 
@@ -84,23 +111,33 @@
 - Token 有效期：4 小时。
 - `require_admin` 依赖校验：解析 header + 验证 `kid`、`aud`、`exp`、签名。
 
-#### C.4 登录失败锁定（写死）
+#### C.4 登录失败锁定（写死，事件表而非聚合表）
 
-- `AdminLoginAttempt` 表字段：`username`, `ip`, `success`, `timestamp`, `fail_count_window`
-- 5 次失败 → 账号锁定 15 分钟（响应 `429`，含 `Retry-After`）；锁定期间密码正确也拒绝。
-- 锁定判定：同 `username + IP` 在 15 分钟内失败次数 ≥ 5。
+- `AdminLoginAttempt` 表字段（**纯事件表**，每条一行，不冗余聚合）：
+  ```
+  id (uuid), username, ip, success (bool), timestamp
+  ```
+- 锁定判定：实时查询同 `username + IP` 在 15 分钟内 `success=false` 的事件数 ≥ 5 → 锁定。
+- 锁定期间密码正确也拒绝，响应 `429` + `Retry-After`。
+- 不在表里冗余 `fail_count_window` 字段——计数由查询实时计算，避免事件/状态双源不一致。
 - IP 限速：10/min 保留作为额外保护（防单 IP 暴力扫描）。
 
 #### C.5 记忆 / 经期原文：管理员不可常规浏览（写死）
 
 - **常规后台不暴露** `GET /admin/memories?user_id=` 与 `GET /admin/cycles?user_id=`。
 - 改为：管理员只能通过举报（`/admin/reports/{id}`）查看原文。
-- **高危一次性访问**：管理员显式提供访问理由（≥ 10 字）→ 服务端生成一次性 token → 表 `AdminMemoryAccessToken` 字段：
+- **高危一次性访问（三因素必须同时满足）**：
+  1. 管理员当前请求带有效 admin JWT（`require_admin` 通过）；
+  2. 请求路径带一次性访问令牌 `access_token`，其 `AdminMemoryAccessToken` 记录存在、未过期（`expires_at > now`）、未被使用（`used_at IS NULL`）；
+  3. `access_token` 绑定的 `memory_id` 与请求路径中的 `memory_id` 完全一致。
+- 三个条件任一不满足 → `403`（避免泄露 token 后被他人/其他 memory 复用）。
+- 流程：管理员显式提供访问理由（≥ 10 字）→ 服务端生成 `AdminMemoryAccessToken` 行：
   ```
   id (uuid), admin_username, memory_id, reason, expires_at, used_at (nullable)
   ```
-  → 通过 `GET /admin/memories/{memory_id}?access_token=...` 访问 → 响应成功即写入 `used_at`，**不可重用**。
-  → `expires_at` 默认 10 分钟；过期或 `used_at` 非空均返回 `410 Gone`。
+  → 通过 `GET /admin/memories/{memory_id}?access_token={token}` 访问 → 响应成功即写入 `used_at`，**不可重用**。
+- `expires_at` 默认 10 分钟；过期或 `used_at` 非空均返回 `410 Gone`。
+- 该次访问的 `admin_username`、`memory_id`、`reason` 同时写入 `AdminAudit`。
 
 #### C.6 操作日志
 
@@ -127,11 +164,12 @@
 ### 单元 / 集成（pytest）
 
 - AI 提取正常、超时、Key 缺失、payload 不合法都走通；超时降级到关键词。
+- 两个开关独立：`enable_third_party_ai=false` 完全不走第三方；`enable_third_party_ai=true & enable_keyword_fallback=false` AI 失败返回 503；安全网始终独立工作。
 - safety.py 命中关键词时即便 AI 失败仍触发援助 modal。
-- admin 登录失败 5 次触发锁定；锁定期间即使正确密码也拒绝。
+- admin 登录失败 5 次触发锁定；锁定期间即使正确密码也拒绝；事件表计数实时查询，不冗余 `fail_count_window`。
 - admin token 用普通 token 替换会被拒；`kid` 错误会被拒。
 - `AdminSetting` 覆盖 env 值生效；启动时若 DB 无值，把 env 写入 DB 一次。
-- 一次性访问令牌：未使用可访问，使用后 `used_at` 写入；过期返回 `410`。
+- 一次性访问令牌：未登录态直接 403；access_token 已使用/过期/绑定不同 memory_id → 403 或 410；三因素同时满足才返回。
 - `is_sensitive=true` 的记忆无论 `is_public` 是否为真，都不出现在 `/api/resonance/feed`。
 - `/api/resonance/respond` 类型字符串匹配后端 `VALID_RESPONSE_TYPES`；演示模式 403。
 - `/admin/reports/{id}/action` 删除关联记忆，级联删除其响应与该记忆上的举报。
@@ -145,8 +183,9 @@
 
 ### 安全网验收
 
-- `safety.py` 命中关键词时延迟 < 50ms（CI 断言）。
+- `safety.py` 命中关键词时延迟 **目标** < 50ms（CI 仅做相对断言，不硬判）。
 - AI 调用即便整体失败，safety.py 命中仍触发援助 modal（集成测试覆盖）。
+- 一次性访问令牌：未登录态调用直接 403；登录态但 access_token 已使用/过期/绑定不同 memory_id → 403 或 410；命中三因素才返回内容。
 
 ## 风险与权衡
 
@@ -159,10 +198,10 @@
 
 新增 SQLite 表：
 
-- `AdminSetting(key, value, updated_at, updated_by)`
-- `AdminLoginAttempt(id, username, ip, success, timestamp)`
+- `AdminSetting(key, value, updated_at, updated_by)` —— `key` 包含 `enable_third_party_ai`、`enable_keyword_fallback`、`minimax_api_key`、`deepseek_api_key`、`default_provider`、`default_model:{provider}` 等
+- `AdminLoginAttempt(id, username, ip, success, timestamp)` —— 纯事件表，无冗余聚合字段
 - `AdminAudit(id, admin_username, action, target, ip, ua, reason, timestamp)`
-- `AdminMemoryAccessToken(id, admin_username, memory_id, reason, expires_at, used_at)`
+- `AdminMemoryAccessToken(id, admin_username, memory_id, reason, expires_at, used_at)` —— 一次性访问令牌
 
 ## 影响范围
 
