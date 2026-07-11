@@ -8,6 +8,7 @@
 ```
 deploy/
 ├── README.md                       ← 本文件
+├── SERVER.md                       ← 服务器信息手册（Claude 会话接手用）
 ├── env.example                     ← 环境变量模板（填真实值后改名 .env）
 ├── setup-new-server.sh             ← 一键初始化新服务器
 ├── nginx-mysite.conf               ← Nginx 站点配置
