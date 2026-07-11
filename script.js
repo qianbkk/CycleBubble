@@ -2194,6 +2194,16 @@
         if (typeof switchTo === 'function') switchTo('home');
         // 刷新首页数据
         if (typeof loadCycleStatus === 'function') loadCycleStatus();
+        // 首次注册：播放 Bubble Genesis 引导动画
+        // 仅注册（非登录）且从未看过 Genesis 时触发
+        if (isRegisterMode && typeof hasSeenGenesis === 'function' && !hasSeenGenesis()) {
+          if (typeof playGenesis === 'function') {
+            playGenesis(function () {
+              var narration = document.getElementById('growthNarration');
+              if (narration) narration.textContent = '你的记录正在慢慢形成属于你的 Pattern。';
+            });
+          }
+        }
         // 重置表单
         emailEl.value = '';
         passEl.value = '';
@@ -2219,6 +2229,231 @@
       updateAuthMode();
       if (typeof switchTo === 'function') switchTo('auth');
     });
+  }
+
+  // ====== Bubble Genesis（首次体验引导） ======
+  // 仅首次注册后播放，帮助用户理解 Bubble 的意义。
+  // 状态记录在 localStorage cb_genesis_seen，播放完成或跳过后永久写入。
+
+  var GENESIS_PHASES = [
+    { duration: 2800, text: "每一次记录，都是了解自己的一个线索。" },
+    { duration: 2400, text: "一次体验被保存。" },
+    { duration: 2800, text: "相似的记录，慢慢连成了线索。" },
+    { duration: 3000, text: "这就是你的 Bubble —— 它会随着理解慢慢形成。" }
+  ];
+
+  function hasSeenGenesis() {
+    try { return localStorage.getItem('cb_genesis_seen') === '1'; }
+    catch (e) { return false; }
+  }
+
+  function markGenesisSeen() {
+    try { localStorage.setItem('cb_genesis_seen', '1'); }
+    catch (e) {}
+  }
+
+  var genesisWaveRAF = null;
+
+  function startGenesisWaves() {
+    var waveBack = document.getElementById('genesisWaveBack');
+    var waveMid = document.getElementById('genesisWaveMid');
+    var waveFront = document.getElementById('genesisWaveFront');
+    if (!waveBack || !waveMid || !waveFront) return;
+
+    var waves = [
+      { el: waveBack, amp: 7, freq: 0.04, speed: 0.5, phase: 0 },
+      { el: waveMid, amp: 5, freq: 0.05, speed: 0.8, phase: 1.5 },
+      { el: waveFront, amp: 4, freq: 0.045, speed: 0.4, phase: 3.0 }
+    ];
+
+    var startTime = performance.now();
+
+    function animate(now) {
+      var t = (now - startTime) / 1000;
+      for (var i = 0; i < waves.length; i++) {
+        var w = waves[i];
+        var points = [];
+        var baseline = 20;
+        for (var x = 0; x <= 600; x += 10) {
+          var y = baseline + Math.sin(x * w.freq + t * w.speed + w.phase) * w.amp;
+          points.push(x + "," + y.toFixed(2));
+        }
+        w.el.setAttribute("d", "M" + points.join(" L") + " L600,40 L0,40 Z");
+      }
+      genesisWaveRAF = requestAnimationFrame(animate);
+    }
+    genesisWaveRAF = requestAnimationFrame(animate);
+  }
+
+  function stopGenesisWaves() {
+    if (genesisWaveRAF) {
+      cancelAnimationFrame(genesisWaveRAF);
+      genesisWaveRAF = null;
+    }
+  }
+
+  function playGenesis(onComplete) {
+    var overlay = document.getElementById('genesisOverlay');
+    if (!overlay) { if (onComplete) onComplete(); return; }
+
+    overlay.hidden = false;
+    overlay.classList.remove('genesis-leaving');
+    overlay.setAttribute('data-phase', '1');
+
+    var textEl = document.getElementById('genesisText');
+    var dots = overlay.querySelectorAll('.genesis-dot');
+    var skipBtn = document.getElementById('genesisSkip');
+    var particlesEl = document.getElementById('genesisParticles');
+    var connectionsEl = document.getElementById('genesisConnections');
+    var textureEl = document.getElementById('genesisTexture');
+
+    // 粒子位置（模拟记录进入 Bubble）
+    var particlePositions = [
+      { left: '32%', bottom: '38%' },
+      { left: '55%', bottom: '52%' },
+      { left: '42%', bottom: '28%' },
+      { left: '62%', bottom: '35%' }
+    ];
+
+    // 连线配置（粒子之间的柔和连接 = Pattern 形成）
+    var connectionConfigs = [
+      { left: '32%', bottom: '38%', width: '55px', rotate: '25deg' },
+      { left: '55%', bottom: '52%', width: '48px', rotate: '-35deg' },
+      { left: '42%', bottom: '28%', width: '50px', rotate: '40deg' }
+    ];
+
+    var timers = [];
+    var finished = false;
+
+    function spawnParticle(index) {
+      if (!particlesEl) return;
+      var p = document.createElement('span');
+      p.className = 'genesis-particle';
+      var pos = particlePositions[index] || particlePositions[0];
+      p.style.left = pos.left;
+      p.style.bottom = pos.bottom;
+      particlesEl.appendChild(p);
+    }
+
+    function spawnConnections() {
+      if (!connectionsEl) return;
+      for (var i = 0; i < connectionConfigs.length; i++) {
+        var c = document.createElement('span');
+        c.className = 'genesis-connection';
+        c.style.left = connectionConfigs[i].left;
+        c.style.bottom = connectionConfigs[i].bottom;
+        c.style.width = connectionConfigs[i].width;
+        c.style.setProperty('--rot', connectionConfigs[i].rotate);
+        c.style.animationDelay = (i * 0.35) + 's';
+        connectionsEl.appendChild(c);
+      }
+    }
+
+    function addTextureLayers(count) {
+      if (!textureEl) return;
+      textureEl.innerHTML = '';
+      for (var i = 0; i < count; i++) {
+        var layer = document.createElement('span');
+        var layerOpacity = 0.06 + i * 0.025;
+        var xPos = 20 + i * 15;
+        var yPos = 30 + i * 10;
+        layer.style.cssText =
+          'position:absolute;inset:0;border-radius:50%;opacity:' + layerOpacity +
+          ';pointer-events:none;background:radial-gradient(circle at ' + xPos + '% ' + yPos + '%, ' +
+          'hsla(275, 40%, 70%, .5), transparent 40%);';
+        textureEl.appendChild(layer);
+      }
+    }
+
+    function setPhase(idx) {
+      if (finished || idx >= GENESIS_PHASES.length) {
+        finishGenesis();
+        return;
+      }
+
+      var phase = GENESIS_PHASES[idx];
+      overlay.setAttribute('data-phase', String(idx + 1));
+
+      // 更新文案（带淡入动画）
+      if (textEl) {
+        textEl.classList.remove('genesis-text-anim');
+        textEl.offsetHeight; // force reflow
+        textEl.textContent = phase.text;
+        textEl.classList.add('genesis-text-anim');
+      }
+
+      // 更新进度点
+      for (var d = 0; d < dots.length; d++) {
+        dots[d].classList.toggle('active', d === idx);
+      }
+
+      // 阶段特定视觉效果
+      if (idx === 1) {
+        // Phase 2：第一个粒子进入（第一次记录被保存）
+        spawnParticle(0);
+      } else if (idx === 2) {
+        // Phase 3：更多粒子 + 连线 + 纹理（Pattern 形成）
+        spawnParticle(1);
+        spawnParticle(2);
+        setTimeout(function () { spawnConnections(); }, 500);
+        addTextureLayers(2);
+      } else if (idx === 3) {
+        // Phase 4：最后一个粒子 + 更丰富纹理（Bubble 成型）
+        spawnParticle(3);
+        addTextureLayers(4);
+      }
+
+      // 调度下一阶段
+      var timer = setTimeout(function () {
+        setPhase(idx + 1);
+      }, phase.duration);
+      timers.push(timer);
+    }
+
+    function finishGenesis() {
+      if (finished) return;
+      finished = true;
+
+      // 清除所有定时器
+      for (var i = 0; i < timers.length; i++) {
+        clearTimeout(timers[i]);
+      }
+
+      // 停止波浪动画
+      stopGenesisWaves();
+
+      // 永久标记已看过
+      markGenesisSeen();
+
+      // 淡出 overlay
+      overlay.classList.add('genesis-leaving');
+
+      setTimeout(function () {
+        overlay.hidden = true;
+        overlay.classList.remove('genesis-leaving');
+        overlay.removeAttribute('data-phase');
+
+        // 清理粒子、连线和纹理
+        if (particlesEl) particlesEl.innerHTML = '';
+        if (connectionsEl) connectionsEl.innerHTML = '';
+        if (textureEl) textureEl.innerHTML = '';
+
+        if (onComplete) onComplete();
+      }, 800);
+    }
+
+    // 跳过按钮
+    if (skipBtn) {
+      skipBtn.onclick = function () {
+        finishGenesis();
+      };
+    }
+
+    // 启动波浪动画
+    startGenesisWaves();
+
+    // 开始第一阶段
+    setPhase(0);
   }
 
   // 启动时检查登录状态

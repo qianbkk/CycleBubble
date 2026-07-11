@@ -5,6 +5,7 @@ cyclebubble_literature/papers/
 *.pdf
 
 # Local / temporary files
+.runlogs/
 .uploads/
 *.zip
 *.tmp

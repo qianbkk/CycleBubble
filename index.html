@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CycleBubble</title>
   <meta name="description" content="CycleBubble — 一个持续理解你的情绪空间。">
-  <link rel="stylesheet" href="./styles.css?v=20260707r">
+  <link rel="stylesheet" href="./styles.css?v=20260711b">
   <!-- API 基础 URL：默认空字符串 = 同源（Nginx 反代 /api/ 到 FastAPI）。
        部署到 Render/其他跨域后端时，把下面这一行改成对应的 URL，例如：
          window.__API_BASE__ = 'https://cyclebubble-api.onrender.com';
@@ -467,6 +467,38 @@
         </span>
       </nav>
 
+      <!-- ====== Bubble Genesis（首次体验引导） ====== -->
+      <div class="genesis-overlay" id="genesisOverlay" hidden>
+        <div class="genesis-stage">
+          <div class="genesis-bubble" id="genesisBubble">
+            <div class="genesis-glow"></div>
+            <div class="genesis-bubble-liquid" id="genesisLiquid">
+              <svg class="wave-svg wave-svg-back" viewBox="0 0 600 40" preserveAspectRatio="none">
+                <path id="genesisWaveBack" d="M0,20 L600,20 L600,40 L0,40 Z" />
+              </svg>
+              <svg class="wave-svg wave-svg-mid" viewBox="0 0 600 40" preserveAspectRatio="none">
+                <path id="genesisWaveMid" d="M0,20 L600,20 L600,40 L0,40 Z" />
+              </svg>
+              <svg class="wave-svg wave-svg-front" viewBox="0 0 600 40" preserveAspectRatio="none">
+                <path id="genesisWaveFront" d="M0,20 L600,20 L600,40 L0,40 Z" />
+              </svg>
+            </div>
+            <div class="genesis-texture" id="genesisTexture"></div>
+            <div class="genesis-particles" id="genesisParticles"></div>
+            <div class="genesis-connections" id="genesisConnections"></div>
+            <div class="genesis-bubble-glass"></div>
+          </div>
+          <p class="genesis-text" id="genesisText"></p>
+          <div class="genesis-progress">
+            <span class="genesis-dot active"></span>
+            <span class="genesis-dot"></span>
+            <span class="genesis-dot"></span>
+            <span class="genesis-dot"></span>
+          </div>
+        </div>
+        <button class="genesis-skip" type="button" id="genesisSkip">跳过</button>
+      </div>
+
     </div>
   </main>
 
@@ -499,6 +531,6 @@
     </div>
   </div>
 
-  <script src="./script.js?v=20260707r"></script>
+  <script src="./script.js?v=20260711b"></script>
 </body>
 </html>

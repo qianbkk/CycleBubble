@@ -1986,3 +1986,306 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
 .screen-admin-login.active { display: flex; flex-direction: column; }
 .screen-admin-app { display: none; }
 .screen-admin-app.active { display: flex; flex-direction: column; }
+
+/* ====== Bubble Genesis（首次体验引导） ====== */
+.genesis-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(245,217,216,.35), transparent 35%),
+    radial-gradient(circle at 80% 25%, rgba(181,169,207,.25), transparent 32%),
+    linear-gradient(165deg, #fbf7f3, #f5f1ef);
+  animation: genesis-fade-in .6s ease;
+  overflow: hidden;
+}
+
+.genesis-overlay[hidden] { display: none !important; }
+
+.genesis-overlay.genesis-leaving {
+  animation: genesis-fade-out .8s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes genesis-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes genesis-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.genesis-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+}
+
+/* ---- Genesis Bubble 主体 ---- */
+.genesis-bubble {
+  position: relative;
+  width: 200px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.5);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.4), rgba(255,255,255,.08) 30%, transparent 42%);
+  box-shadow: 0 0 40px rgba(181,169,207,.10);
+  opacity: .35;
+  transition: opacity 1.5s ease, box-shadow 1.5s ease, background 1.5s ease, border-color 1.5s ease;
+}
+
+/* Phase 1：未形成，轻微呼吸 */
+.genesis-overlay[data-phase="1"] .genesis-bubble {
+  opacity: .45;
+  border-color: rgba(255,255,255,.6);
+  animation: genesis-breathe 4.5s ease-in-out infinite;
+}
+
+/* Phase 2：第一次记录进入 */
+.genesis-overlay[data-phase="2"] .genesis-bubble {
+  opacity: .62;
+  border-color: rgba(255,255,255,.7);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.5), rgba(255,255,255,.12) 28%, transparent 40%),
+    linear-gradient(145deg, rgba(255,255,255,.3), rgba(245,217,216,.15));
+  box-shadow: 0 0 50px rgba(181,169,207,.14), inset 6px 10px 24px rgba(255,255,255,.3);
+  animation: genesis-breathe 4.2s ease-in-out infinite;
+}
+
+/* Phase 3：Pattern 形成 */
+.genesis-overlay[data-phase="3"] .genesis-bubble {
+  opacity: .78;
+  border-color: rgba(255,255,255,.82);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.6), rgba(255,255,255,.16) 26%, transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,.4), rgba(245,217,216,.22));
+  box-shadow: 0 0 55px rgba(181,169,207,.16), inset 8px 12px 30px rgba(255,255,255,.4), inset -6px -10px 28px rgba(181,169,207,.08);
+  animation: genesis-breathe 5s ease-in-out infinite;
+}
+
+/* Phase 4：Bubble 形成完成 */
+.genesis-overlay[data-phase="4"] .genesis-bubble {
+  opacity: 1;
+  border-color: rgba(255,255,255,.92);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.8), rgba(255,255,255,.2) 24%, transparent 36%),
+    linear-gradient(145deg, rgba(255,255,255,.55), rgba(245,217,216,.3));
+  box-shadow:
+    inset 12px 16px 40px rgba(255,255,255,.6),
+    inset -10px -14px 36px rgba(181,169,207,.12),
+    0 20px 50px rgba(232,163,167,.16),
+    0 0 50px rgba(181,169,207,.14);
+  animation: genesis-breathe 5.8s ease-in-out infinite;
+}
+
+@keyframes genesis-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.03); }
+}
+
+/* ---- Genesis 液体 ---- */
+.genesis-bubble-liquid {
+  position: absolute;
+  left: -14%; right: -14%; bottom: -11%;
+  z-index: 1;
+  height: 12%;
+  overflow: hidden;
+  border-radius: 50% 50% 0 0;
+  transition: height 1.5s cubic-bezier(.4,0,.2,1), background 1.5s ease;
+  background: linear-gradient(180deg, rgba(242,195,199,.2), rgba(184,184,222,.12));
+}
+
+.genesis-overlay[data-phase="2"] .genesis-bubble-liquid {
+  height: 32%;
+  background: linear-gradient(180deg, rgba(242,195,199,.35), rgba(212,165,207,.2), rgba(184,184,222,.15));
+}
+
+.genesis-overlay[data-phase="3"] .genesis-bubble-liquid {
+  height: 50%;
+  background: linear-gradient(180deg, rgba(242,195,199,.5), rgba(232,163,167,.35), rgba(212,165,207,.25), rgba(184,184,222,.18));
+}
+
+.genesis-overlay[data-phase="4"] .genesis-bubble-liquid {
+  height: 66%;
+  background: linear-gradient(180deg, #f2c3c7 0%, #e8a3a7 35%, #d4a5cf 70%, #b8b8de 100%);
+}
+
+/* ---- Genesis 玻璃高光 ---- */
+.genesis-bubble-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 32% 24%, rgba(255,255,255,.3), transparent 35%);
+  pointer-events: none;
+  opacity: .3;
+  transition: opacity 1.5s ease;
+}
+
+.genesis-overlay[data-phase="3"] .genesis-bubble-glass { opacity: .6; }
+.genesis-overlay[data-phase="4"] .genesis-bubble-glass {
+  opacity: 1;
+  background: radial-gradient(ellipse at 32% 24%, rgba(255,255,255,.72) 0 13%, rgba(255,255,255,.2) 14% 24%, transparent 35%),
+    radial-gradient(ellipse at 70% 80%, rgba(255,255,255,.18), transparent 34%),
+    linear-gradient(145deg, rgba(255,255,255,.2), transparent 42%);
+}
+
+/* ---- Genesis 纹理层（矿物沉积） ---- */
+.genesis-texture {
+  position: absolute;
+  inset: 15%;
+  z-index: 2;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+
+.genesis-overlay[data-phase="3"] .genesis-texture { opacity: .5; }
+.genesis-overlay[data-phase="4"] .genesis-texture { opacity: 1; }
+
+/* ---- Genesis 粒子 ---- */
+.genesis-particles {
+  position: absolute;
+  inset: 10% 15%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.genesis-particle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.55);
+  box-shadow: 0 0 8px rgba(255,255,255,.3);
+  opacity: 0;
+  animation: genesis-particle-appear 1.2s cubic-bezier(.4,0,.2,1) forwards;
+}
+
+@keyframes genesis-particle-appear {
+  0% { opacity: 0; transform: scale(0) translateY(20px); }
+  40% { opacity: .8; transform: scale(1.3) translateY(-4px); }
+  100% { opacity: .6; transform: scale(1) translateY(0); }
+}
+
+/* ---- Genesis 连线（Pattern 形成） ---- */
+.genesis-connections {
+  position: absolute;
+  inset: 10% 15%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+
+.genesis-overlay[data-phase="3"] .genesis-connections,
+.genesis-overlay[data-phase="4"] .genesis-connections {
+  opacity: 1;
+}
+
+.genesis-connection {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(181,169,207,.35), rgba(232,163,167,.25), transparent);
+  transform-origin: left center;
+  opacity: 0;
+  animation: genesis-connection-appear 1s ease forwards;
+}
+
+@keyframes genesis-connection-appear {
+  from { opacity: 0; transform: scaleX(0) rotate(var(--rot, 0deg)); }
+  to { opacity: .6; transform: scaleX(1) rotate(var(--rot, 0deg)); }
+}
+
+/* ---- Genesis 柔和光晕 ---- */
+.genesis-glow {
+  position: absolute;
+  inset: -25%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,217,216,.12), transparent 60%);
+  opacity: .2;
+  transition: opacity 1.5s ease;
+}
+
+.genesis-overlay[data-phase="2"] .genesis-glow { opacity: .35; }
+.genesis-overlay[data-phase="3"] .genesis-glow { opacity: .5; }
+.genesis-overlay[data-phase="4"] .genesis-glow { opacity: .65; }
+
+/* ---- Genesis 文案 ---- */
+.genesis-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--muted);
+  text-align: center;
+  max-width: 280px;
+  min-height: 54px;
+  letter-spacing: 0.3px;
+}
+
+.genesis-text.genesis-text-anim {
+  animation: genesis-text-appear .8s ease forwards;
+}
+
+@keyframes genesis-text-appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Genesis 进度点 ---- */
+.genesis-progress {
+  display: flex;
+  gap: 8px;
+}
+
+.genesis-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background .4s ease, width .4s ease, border-radius .4s ease;
+}
+
+.genesis-dot.active {
+  background: var(--lavender);
+  width: 16px;
+  border-radius: 3px;
+}
+
+/* ---- Genesis 跳过按钮 ---- */
+.genesis-skip {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  border: none;
+  background: transparent;
+  color: var(--subtle);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: .4;
+  transition: opacity .2s;
+  padding: 8px 12px;
+  letter-spacing: 0.5px;
+}
+
+.genesis-skip:hover { opacity: .8; }
+
+/* ---- Genesis 响应式 ---- */
+@media (max-width: 420px) {
+  .genesis-bubble { width: 180px; }
+  .genesis-text { font-size: 14px; max-width: 260px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .genesis-bubble { animation: none !important; }
+  .genesis-particle { animation-duration: .3s !important; }
+  .genesis-connection { animation-duration: .3s !important; }
+}

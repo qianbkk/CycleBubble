@@ -1,88 +1,434 @@
-﻿# CycleBubble 后端启动脚本 (PowerShell)
+﻿# ============================================================================
+#   CycleBubble 本地开发启停脚本 (PowerShell)
+#   Companion to dev.bat — dev.bat is a thin wrapper that calls this file.
+#
+#   Features:
+#     - start / stop / restart / status / help  子命令
+#     - 无参数进入交互菜单
+#     - 同时启动后端 (uvicorn) + 前端 (http.server)，后台运行
+#     - PID 文件管理（.runlogs/ 目录）
+#     - 日志轮转（按大小，保留 3 代）
+#     - 端口冲突检测 + HTTP 健康探测
+#     - 依赖自动安装检测
+#
+#   适配 master 分支目录结构：
+#     - 前端文件在项目根目录（index.html / script.js / styles.css / api.js）
+#     - 后端入口为 backend.main:app（在项目根目录运行 uvicorn）
+#     - requirements.txt 在项目根目录
+# ============================================================================
 
-# ===== 配置端口（想换端口改这里）=====
-$PORT = 8000
+$ErrorActionPreference = 'Stop'
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-Write-Host "==================================="
-Write-Host " CycleBubble 后端启动 (端口 $PORT)"
-Write-Host "==================================="
-Write-Host ""
+# --- 日志轮转配置 --------------------------------------------------------
+# 按大小轮转（不依赖时钟）。日志超过 $LogMaxBytes 时滚动到 .1, .2, ...
+# 保留 $LogKeepCount 代（含当前）。
+$LogMaxBytes  = 2 * 1024 * 1024   # 2 MB
+$LogKeepCount = 3                   # log、log.1、log.2
 
-# =============================================
-#  Step 1: 检查 Python
-# =============================================
-$python = Get-Command python -ErrorAction SilentlyContinue
-if (-not $python) {
-    Write-Host "[错误] 未找到 Python，请先安装 Python 3.10+" -ForegroundColor Red
-    Read-Host "按 Enter 退出"
-    exit 1
-}
-Write-Host "[OK] Python 已找到" -ForegroundColor Green
+function Rotate-Log {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return }
+    $size = (Get-Item $Path).Length
+    if ($size -lt $LogMaxBytes) { return }
 
-# =============================================
-#  Step 2: 检查依赖（全局 Python）
-# =============================================
-$fastapiCheck = python -c "import fastapi" 2>&1
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "[1/3] 依赖已安装" -ForegroundColor Green
-    Write-Host "[2/3] 跳过 pip install" -ForegroundColor Green
-} else {
-    Write-Host "[1/3] 安装依赖（首次运行需联网）..." -ForegroundColor Cyan
-    python -m pip install --index-url http://pypi.org/simple --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host ""
-        Write-Host "[错误] 依赖安装失败" -ForegroundColor Red
-        Write-Host "提示: 网络受限？尝试运行 python -m pip install -r requirements.txt 手动安装" -ForegroundColor Yellow
-        Read-Host "按 Enter 退出"
-        exit 1
+    # 滚动链：.keep → 删除；.(keep-1) → .keep；…；.1 → .2
+    $topIndex = $LogKeepCount
+    if (Test-Path "$Path.$topIndex") { Remove-Item "$Path.$topIndex" -Force }
+    for ($i = $topIndex - 1; $i -ge 1; $i--) {
+        $from = "$Path.$i"
+        $to   = "$Path.$($i + 1)"
+        if (Test-Path $from) { Move-Item $from -Destination $to -Force }
     }
-    Write-Host "[2/3] 依赖安装完成" -ForegroundColor Green
+    if (Test-Path $Path) {
+        Move-Item $Path -Destination "$Path.1" -Force
+    }
+    Write-Host ("  已轮转日志：{0}（{1} KB → .1）" -f $Path, [int]($size / 1024)) -ForegroundColor DarkGray
 }
-Write-Host "[3/3] 准备启动" -ForegroundColor Green
-Write-Host ""
 
-# =============================================
-#  Step 3: 检查端口冲突
-# =============================================
-$portInUse = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
-if ($portInUse) {
-    Write-Host "[警告] 端口 $PORT 已被占用 (PID: $($portInUse.OwningProcess))" -ForegroundColor Yellow
-    Write-Host "这可能是上一次启动过的程序残留。"
-    Write-Host ""
-    Write-Host "请选择:"
-    Write-Host "  [1] 自动关闭占用进程后继续"
-    Write-Host "  [2] 修改 dev.ps1 第 5 行 `$PORT=XXXX 换端口"
-    Write-Host ""
-    $choice = Read-Host "请输入 (1 或 2)"
-    if ($choice -eq "1") {
-        Write-Host "关闭 PID $($portInUse.OwningProcess) ..." -ForegroundColor Yellow
-        Stop-Process -Id $portInUse.OwningProcess -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 2
+
+# --- 路径与端口配置 ------------------------------------------------------
+$ScriptDir         = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot       = $ScriptDir
+# 前端静态服务的根目录：项目根目录（index.html / script.js 等在此）
+$FrontendDir       = $ProjectRoot
+# 后端运行目录：项目根目录（uvicorn backend.main:app 需在根目录运行）
+$BackendDir        = $ProjectRoot
+$BackendHost       = '127.0.0.1'
+$BackendPort       = 8000
+$FrontendHost      = '127.0.0.1'
+$FrontendPort      = 8765
+$LogDir            = Join-Path $ProjectRoot '.runlogs'
+$BackendPidFile    = Join-Path $LogDir 'backend.pid'
+$FrontendPidFile   = Join-Path $LogDir 'frontend.pid'
+$BackendOutFile    = Join-Path $LogDir 'backend.out.log'
+$BackendErrFile    = Join-Path $LogDir 'backend.err.log'
+$FrontendOutFile   = Join-Path $LogDir 'frontend.out.log'
+$FrontendErrFile   = Join-Path $LogDir 'frontend.err.log'
+$CbJwtSecret       = 'dev-local-secret-not-for-prod'
+$CbAdminPassword   = 'dev-local-admin-secret-not-for-prod'
+# pydantic-settings 的 List[str] 字段要求 JSON 数组格式（非 CSV）
+$CbCorsOrigins     = '["http://localhost:{0}","http://127.0.0.1:{0}"]' -f $FrontendPort
+# 与 backend/main.py 的 DEMO_EMAIL / DEMO_PASSWORD 保持一致（dev 启动横幅）
+$DemoEmail         = 'demo@cyclebubble.local'
+$DemoPassword      = 'demo'
+
+if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
+
+# --- 顶部横幅 --------------------------------------------------------------
+function Write-Banner {
+    Write-Host ''
+    Write-Host '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' -ForegroundColor Cyan
+    Write-Host '       CycleBubble  本地开发服务' -ForegroundColor Cyan
+    Write-Host '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' -ForegroundColor Cyan
+    Write-Host ("   后端地址 ：http://{0}:{1}  (uvicorn)"   -f $BackendHost,  $BackendPort)
+    Write-Host ("   前端地址 ：http://{0}:{1}  ← 直接进 CycleBubble" -f $FrontendHost, $FrontendPort) -ForegroundColor Green
+    Write-Host ("   接口文档 ：http://{0}:{1}/docs"          -f $BackendHost,  $BackendPort)
+    Write-Host ("   日志目录 ：{0}"                            -f $LogDir)
+    Write-Host '──────────────────────────────────────────────────────' -ForegroundColor Cyan
+}
+
+# Return @([int[]] $pids) of anything LISTENING on $port (IPv4 + IPv6).
+function Get-PidsOnPort {
+    param([int]$Port)
+    $listeners = Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue
+    $pids = @()
+    if ($listeners) {
+        $pids = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
+    }
+    return ,$pids
+}
+
+function Read-PidFile {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return @() }
+    $pids = @()
+    foreach ($line in (Get-Content $Path)) {
+        $line = $line.Trim()
+        if ($line -match '^\d+$') { $pids += [int]$line }
+    }
+    return $pids
+}
+
+function Write-PidFile {
+    param([int]$ProcessId, [string]$Path)
+    $dir = Split-Path -Parent $Path
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    # Try Set-Content first; fall back to direct .NET write if PowerShell's
+    # stream layer swallows the IO.  Either way, never throw — stop() uses
+    # port lookup so a missing pid file is non-fatal (state just reads 'foreign').
+    try {
+        Set-Content -Path $Path -Value "$ProcessId" -Encoding ascii -Force
+        return $true
+    } catch {
+        try {
+            [System.IO.File]::WriteAllText($Path, "$ProcessId`n", [System.Text.Encoding]::ASCII)
+            return $true
+        } catch {
+            return $false
+        }
+    }
+}
+
+function Remove-PidFile {
+    param([string]$Path)
+    if (Test-Path $Path) { Remove-Item -Path $Path -Force }
+}
+
+# Compute state: 'running' (our PID on port) | 'foreign' (port busy but not by us) | 'stopped'
+function Get-ServiceState {
+    param([int]$Port, [string]$PidFile, [string]$Label)
+    $portPids  = Get-PidsOnPort -Port $Port
+    $ownPids   = Read-PidFile -Path $PidFile
+    if ($ownPids.Count -eq 0) {
+        if ($portPids.Count -gt 0) {
+            return @{ State='foreign'; Pids=$portPids }
+        } else {
+            return @{ State='stopped'; Pids=@() }
+        }
+    }
+    foreach ($op in $ownPids) {
+        if ($portPids -contains $op) {
+            return @{ State='running'; Pids=$portPids }
+        }
+    }
+    # our recorded PIDs do not match anyone on the port — PID file stale
+    Remove-PidFile -Path $PidFile
+    if ($portPids.Count -gt 0) {
+        return @{ State='foreign'; Pids=$portPids }
     } else {
-        Write-Host "已取消。请修改 dev.ps1 第 5 行设置 PORT。" -ForegroundColor Yellow
-        Read-Host "按 Enter 退出"
-        exit 1
+        return @{ State='stopped'; Pids=@() }
     }
 }
 
-# =============================================
-#  Step 4: 启动后端（全局 Python）
-# =============================================
-Write-Host "==================================="
-Write-Host " 后端启动中" -ForegroundColor Green
-Write-Host " API:   http://localhost:$PORT/docs"
-Write-Host " 前端:  浏览器打开 index.html"
-Write-Host "        或运行 python -m http.server 8806"
-Write-Host " 停止:  按 Ctrl+C"
-Write-Host "==================================="
-Write-Host ""
-
-# 本地 dev 默认注入仅供本地的 JWT 密钥，避免双击启动因缺密钥失败
-# 如需用真实密钥，覆盖 $env:CB_JWT_SECRET 即可
-if (-not $env:CB_JWT_SECRET) {
-    $env:CB_JWT_SECRET = "dev-only-local-secret-do-not-use-in-prod-2026"
+function Print-State {
+    param([string]$Label, [hashtable]$S)
+    $stateText = switch ($S.State) {
+        'running' { '运行中' }
+        'foreign' { '已被占用' }
+        'stopped' { '已停止' }
+    }
+    $color = switch ($S.State) {
+        'running' { 'Green'  }
+        'foreign' { 'Yellow' }
+        'stopped' { 'Gray'   }
+    }
+    $pidsStr = ''
+    if ($S.State -eq 'running') { $pidsStr = ("进程：{0}" -f ($S.Pids -join ' ')) }
+    elseif ($S.State -eq 'foreign') { $pidsStr = ("进程：{0}（非本脚本启动）" -f ($S.Pids -join ' ')) }
+    else { $pidsStr = '' }
+    $port = if ($Label -eq 'backend') { $BackendPort } else { $FrontendPort }
+    $labelText = if ($Label -eq 'backend') { '后端服务' } else { '前端服务' }
+    Write-Host ("   {0,-9}  端口 {1,-5}  " -f $labelText, $port) -NoNewline
+    Write-Host ("{0,-8}" -f $stateText) -ForegroundColor $color -NoNewline
+    if ($pidsStr) { Write-Host ("  {0}" -f $pidsStr) } else { Write-Host '' }
 }
 
-python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port $PORT
+function Http-Probe {
+    param([string]$Label, [string]$Url)
+    try {
+        $resp = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+        $code = $resp.StatusCode
+        $ok   = ($code -lt 400)
+    } catch {
+        $resp = $_.Exception.Response
+        if ($resp -and $resp.StatusCode) {
+            $code = [int]$resp.StatusCode
+        } else {
+            $code = 'err'
+        }
+        $ok = $false
+    }
+    if ($ok) {
+        Write-Host ("   {0,-22}" -f $Label) -NoNewline
+        Write-Host '可访问' -ForegroundColor Green -NoNewline
+        Write-Host ("  HTTP {0}" -f $code)
+    } else {
+        Write-Host ("   {0,-22}" -f $Label) -NoNewline
+        Write-Host '不可访问' -ForegroundColor Gray -NoNewline
+        Write-Host ("  HTTP {0}" -f $code)
+    }
+}
 
-Read-Host "按 Enter 退出"
+function Show-Status {
+    Write-Banner
+    $be = Get-ServiceState -Port $BackendPort  -PidFile $BackendPidFile  -Label 'backend'
+    Print-State 'backend'  $be
+    $fe = Get-ServiceState -Port $FrontendPort -PidFile $FrontendPidFile -Label 'frontend'
+    Print-State 'frontend' $fe
+    Write-Host '──────────────────────────────────────────────────────' -ForegroundColor Gray
+    Write-Host '【接口探测】'                                              -ForegroundColor Cyan
+    Http-Probe '后端 健康检查   '  ("http://{0}:{1}/api/health" -f $BackendHost,  $BackendPort)
+    Http-Probe '后端 接口文档   '  ("http://{0}:{1}/docs"       -f $BackendHost,  $BackendPort)
+    Http-Probe '前端 入口页面   '  ("http://{0}:{1}/"           -f $FrontendHost, $FrontendPort)
+    Write-Host '──────────────────────────────────────────────────────' -ForegroundColor Gray
+    Write-Host ''
+}
+
+function Start-One {
+    param(
+        [string]$Label,
+        [string]$WorkingDir,
+        [string[]]$CommandArgs,
+        [string]$PidFile,
+        [string]$OutFile,
+        [string]$ErrFile,
+        [hashtable]$ExtraEnv
+    )
+    $portPids = Get-PidsOnPort -Port ($ExtraEnv.Port)
+    if ($portPids.Count -gt 0) {
+        $labelText2 = if ($Label -eq 'backend') { '后端服务' } else { '前端服务' }
+        Write-Host ("⚠ {0} 端口 {1} 已被占用（PID：{2}）" -f $labelText2, $ExtraEnv.Port, ($portPids -join ' ')) -ForegroundColor Yellow
+        Write-Host '   跳过启动。如需重启请先执行 stop 或手动 taskkill。'
+        return
+    }
+
+    # Rotate before each start so the new run lands on a fresh log file.
+    # Rotation is size-based (no clock dependency), so it's safe to call
+    # back-to-back from rapid restart loops.
+    Rotate-Log -Path $OutFile
+    Rotate-Log -Path $ErrFile
+
+    $labelText = if ($Label -eq 'backend') { '后端服务' } else { '前端服务' }
+    Write-Host ("▶ 启动 {0}  ...  日志：{1}" -f $labelText, $OutFile) -ForegroundColor Cyan
+    try {
+        # 先把 ExtraEnv 里的非 Port 变量 set 到当前 PowerShell 进程环境，
+        # Start-Process 派生的子进程会继承这些变量。
+        # 注意：必须放在 Start-Process 之前才有效。
+        foreach ($k in $ExtraEnv.Keys) {
+            if ($k -eq 'Port') { continue }
+            $v = $ExtraEnv[$k]
+            if ($null -ne $v -and "$v" -ne '') {
+                try { [Environment]::SetEnvironmentVariable($k, $v, 'Process') } catch { }
+            }
+        }
+
+        $proc = Start-Process -FilePath 'python.exe' `
+                              -ArgumentList $CommandArgs `
+                              -WorkingDirectory $WorkingDir `
+                              -RedirectStandardOutput $OutFile `
+                              -RedirectStandardError  $ErrFile `
+                              -WindowStyle Hidden `
+                              -PassThru
+        Write-Host ("   已派生子进程：PID {0}" -f $proc.Id) -ForegroundColor Gray
+    } catch {
+        Write-Host ("   ✗ 启动失败：{0}" -f $_.Exception.Message) -ForegroundColor Red
+        return
+    }
+
+    # 写 PID 文件放最后，避免半启动状态留下脏记录
+    $pidWritten = Write-PidFile -ProcessId $proc.Id -Path $PidFile
+    if ($pidWritten) {
+        Write-Host ("✓ {0} 已就绪  PID {1}" -f $labelText, $proc.Id) -ForegroundColor Green
+    } else {
+        Write-Host ("⚠ {0} 已就绪  PID {1}（PID 文件未写入，状态会显示「已被占用」，不影响使用）" -f $labelText, $proc.Id) -ForegroundColor Yellow
+    }
+}
+
+function Stop-One {
+    param([string]$Label, [int]$Port, [string]$PidFile)
+    $labelText = if ($Label -eq 'backend') { '后端服务' } else { '前端服务' }
+    $ownPids = Read-PidFile -Path $PidFile
+    $portPids = Get-PidsOnPort -Port $Port
+    $targets = @($portPids | Sort-Object -Unique)
+    if ($targets.Count -eq 0 -and $ownPids.Count -eq 0) {
+        Write-Host ("{0} 端口 {1} 本来就没在运行" -f $labelText, $Port) -ForegroundColor Gray
+        return
+    }
+    foreach ($p in $targets) {
+        try { Stop-Process -Id $p -Force -ErrorAction Stop } catch { }
+    }
+    foreach ($p in $ownPids) {
+        if ($targets -notcontains $p) {
+            try { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue } catch { }
+        }
+    }
+    Remove-PidFile -Path $PidFile
+    Write-Host ("✓ {0} 已停止  端口 {1}，结束 {2} 个进程" -f $labelText, $Port, $targets.Count) -ForegroundColor Green
+}
+
+# --- 依赖检测 -------------------------------------------------------------
+# 启动后端前检查 uvicorn 是否存在；缺失则自动 pip install -r requirements.txt
+function Ensure-BackendDeps {
+    $check = python -c "import uvicorn" 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ''
+        Write-Host '⚠ 后端依赖缺失，自动安装 ...' -ForegroundColor Yellow
+        $reqPath = Join-Path $ProjectRoot 'requirements.txt'
+        Write-Host ("  pip install -r {0}" -f $reqPath) -ForegroundColor Gray
+        python -m pip install -r $reqPath -q 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host '  ✗ 依赖安装失败，请手动执行 pip install -r requirements.txt' -ForegroundColor Red
+            return $false
+        }
+        Write-Host '  ✓ 依赖安装完成' -ForegroundColor Green
+        Write-Host ''
+    }
+    return $true
+}
+
+# --- Actions -------------------------------------------------------------
+function Action-Start {
+    # 启动前先检测后端依赖
+    if (-not (Ensure-BackendDeps)) { return }
+
+    Start-One -Label 'backend'  -WorkingDir $BackendDir  -CommandArgs @('-m','uvicorn','backend.main:app','--host',$BackendHost,'--port',[string]$BackendPort) `
+              -PidFile $BackendPidFile  -OutFile $BackendOutFile  -ErrFile $BackendErrFile `
+              -ExtraEnv @{ Port=$BackendPort; CB_JWT_SECRET=$CbJwtSecret; CB_ADMIN_PASSWORD=$CbAdminPassword; CB_CORS_ORIGINS=$CbCorsOrigins }
+    Start-One -Label 'frontend' -WorkingDir $FrontendDir -CommandArgs @('-m','http.server',[string]$FrontendPort,'--bind',$FrontendHost) `
+              -PidFile $FrontendPidFile -OutFile $FrontendOutFile -ErrFile $FrontendErrFile `
+              -ExtraEnv @{ Port=$FrontendPort }
+    Write-Host ''
+    # 等后端冷启动，再探测；OK 后顺手把 demo 账号横幅打出来
+    $ready = $false
+    for ($i = 0; $i -lt 25; $i++) {
+        try {
+            $h = Invoke-WebRequest -Uri ("http://{0}:{1}/api/health" -f $BackendHost, $BackendPort) `
+                                   -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
+            if ($h.StatusCode -lt 400) { $ready = $true; break }
+        } catch { Start-Sleep -Milliseconds 400 }
+    }
+    if ($ready) {
+        Write-Host '   ┌──────────────────────────────────────────────┐' -ForegroundColor Cyan
+        Write-Host '   │  本地演示账号（后端自动注入，开箱即用）      │' -ForegroundColor Cyan
+        Write-Host '   │                                              │' -ForegroundColor Cyan
+        Write-Host ("   │    账号   ：{0,-32}│" -f $DemoEmail) -ForegroundColor Cyan
+        Write-Host ("   │    密码   ：{0,-32}│" -f $DemoPassword) -ForegroundColor Cyan
+        Write-Host '   │                                              │' -ForegroundColor Cyan
+        Write-Host '   └──────────────────────────────────────────────┘' -ForegroundColor Cyan
+    } else {
+        Write-Host '   ⚠ 后端 /api/health 10 秒内未就绪，请查看 .runlogs/backend.err.log' -ForegroundColor Yellow
+    }
+    Write-Host ''
+    Show-Status
+}
+
+function Action-Stop {
+    Stop-One 'backend'  -Port $BackendPort  -PidFile $BackendPidFile
+    Stop-One 'frontend' -Port $FrontendPort -PidFile $FrontendPidFile
+    Write-Host ''
+    Show-Status
+}
+
+function Action-Restart {
+    Action-Stop
+    Write-Host ''
+    Write-Host '等待 1.5 秒后重新启动 ...' -ForegroundColor Cyan
+    Start-Sleep -Seconds 1.5
+    Action-Start
+}
+
+# --- 子命令分发 -----------------------------------------------------------
+$action = if ($args.Count -gt 0) { $args[0] } else { '' }
+switch -Regex ($action) {
+    '^start$'   { Action-Start;   return }
+    '^stop$'    { Action-Stop;    return }
+    '^restart$' { Action-Restart; return }
+    '^status$'  { Show-Status;    return }
+    '^help$'    {
+        Write-Host ''
+        Write-Host '用法：dev.bat [start|stop|restart|status|help]'
+        Write-Host '   无参数   进入交互菜单（启动/停止/重启/状态/退出）'
+        Write-Host '   start    同时启动后端和前端'
+        Write-Host '   stop     同时关闭后端和前端'
+        Write-Host '   restart  先停止再启动'
+        Write-Host '   status   查看端口、进程、HTTP 健康状态'
+        Write-Host '   help     显示本帮助'
+        Write-Host ''
+        Write-Host '端口配置（如需修改请编辑 dev.ps1 顶部的变量）：'
+        Write-Host ("   后端 ：http://{0}:{1}" -f $BackendHost, $BackendPort)
+        Write-Host ("   前端 ：http://{0}:{1}" -f $FrontendHost, $FrontendPort)
+        Write-Host ''
+        Write-Host '日志文件位于 .runlogs/ 目录，按大小自动轮转（保留 3 代）。'
+        Write-Host ''
+        return
+    }
+    '^$' {
+        # 交互菜单
+        while ($true) {
+            Write-Banner
+            Write-Host ''
+            Write-Host '请选择操作：' -ForegroundColor Yellow
+            Write-Host '   1) 启动后端 + 前端'
+            Write-Host '   2) 停止后端 + 前端'
+            Write-Host '   3) 重启后端 + 前端'
+            Write-Host '   0) 查看状态'
+            Write-Host '   9) 退出'
+            Write-Host ''
+            $choice = Read-Host '  输入选项 [0-3, 9]'
+            switch ($choice) {
+                '1' { Action-Start;   Write-Host "`n按任意键返回菜单 ..."; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); continue }
+                '2' { Action-Stop;    Write-Host "`n按任意键返回菜单 ..."; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); continue }
+                '3' { Action-Restart; Write-Host "`n按任意键返回菜单 ..."; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); continue }
+                '0' { Show-Status;    Write-Host "`n按任意键返回菜单 ..."; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); continue }
+                '9' { return }
+                default { Write-Host ("未知选项 '{0}'，请重新输入" -f $choice) -ForegroundColor Red; Start-Sleep -Seconds 1 }
+            }
+        }
+    }
+    default {
+        Write-Host ("未知子命令：{0}" -f $action) -ForegroundColor Red
+        Write-Host '请用 dev.bat help 查看支持的命令'
+    }
+}
