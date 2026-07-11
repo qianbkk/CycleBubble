@@ -72,7 +72,7 @@ class Settings(BaseSettings):
 
     # AI 提供商配置
     ai_default_provider: str = "minimax"
-    ai_default_model_minimax: str = "M3"
+    ai_default_model_minimax: str = "minimax-m3"
     ai_default_model_deepseek: str = "v4-flash"
     ai_request_timeout_seconds: int = 8
 
