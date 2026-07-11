@@ -1,0 +1,22 @@
+[Unit]
+Description=CycleBubble FastAPI Backend
+After=network.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/var/www/app
+Environment="PATH=/var/www/app/venv/bin"
+Environment="CB_DATABASE_URL=sqlite:////var/www/app/cyclebubble.db"
+# ⚠️ 下面两行必须从 env.example 填入真实值后才能启动
+Environment="CB_JWT_SECRET=REPLACE_ME_WITH_RANDOM_SECRET"
+Environment="CB_ADMIN_PASSWORD=REPLACE_ME_WITH_RANDOM_PASSWORD"
+ExecStart=/var/www/app/venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/app/cyclebubble-api.log
+StandardError=append:/var/log/app/cyclebubble-api.err.log
+
+[Install]
+WantedBy=multi-user.target
