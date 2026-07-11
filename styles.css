@@ -476,6 +476,30 @@ textarea {
 
 textarea::placeholder { color: var(--subtle); }
 
+.record-public-option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(181,169,207,.22);
+  border-radius: 14px;
+  background: rgba(255,253,251,.6);
+  cursor: pointer;
+}
+.record-public-option input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--rose); }
+.record-public-text { display: grid; gap: 4px; }
+.record-public-text strong { font-size: 14px; font-weight: 600; color: var(--ink); }
+.record-public-text small { font-size: 12px; line-height: 1.55; color: var(--subtle); }
+.resonance-card-footer { display: flex; justify-content: flex-end; padding: 10px 4px 0; }
+.resonance-report-btn { background: transparent; border: 0; color: var(--subtle); font: inherit; font-size: 12px; padding: 4px 8px; cursor: pointer; }
+.resonance-report-btn:hover { color: var(--rose); }
+.resonance-report-panel { margin-top: 10px; padding: 12px; border: 1px solid rgba(232,163,167,.24); border-radius: 12px; background: rgba(245,217,216,.18); display: grid; gap: 8px; }
+.resonance-report-panel select, .resonance-report-panel textarea { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid rgba(181,169,207,.28); border-radius: 8px; background: #fffdfb; color: var(--ink); }
+.resonance-report-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.resonance-report-actions .btn-primary { padding: 6px 14px; font-size: 12px; }
+.resonance-report-actions .btn-link { padding: 4px 8px; font-size: 12px; }
+
 /* ====== 理解页 ====== */
 /* 理解页 — Evidence → Pattern → Reflection */
 .insight-evidence {

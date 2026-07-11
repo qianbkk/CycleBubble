@@ -6,6 +6,7 @@ from .database import init_db, demo_engine
 from sqlmodel import Session, select
 from .models import User, Memory
 from .auth import hash_password
+from .services.admin_settings import init_settings_from_env
 
 DEMO_EMAIL = "demo@cyclebubble.local"
 
@@ -15,6 +16,8 @@ async def lifespan(app: FastAPI):
     """启动时同时初始化真实库和演示库"""
     from . import models  # 确保模型被注册
     init_db(target="both")
+    # 把环境变量默认值写入 AdminSetting
+    init_settings_from_env()
     # 确保演示账号存在
     _ensure_demo_user()
     yield

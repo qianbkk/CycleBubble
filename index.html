@@ -91,6 +91,13 @@
           <label class="note-field" id="noteField">
             <textarea id="recordInput" placeholder="写下具体场景和你的感受……"></textarea>
           </label>
+          <label class="record-public-option" id="recordPublicOption">
+            <input type="checkbox" id="recordIsPublic">
+            <span class="record-public-text">
+              <strong>允许匿名出现在共鸣流</strong>
+              <small>公开后，原文会被同样经历相似感受的人看到。仅你自己可见的私人记录不会被纳入共鸣。</small>
+            </span>
+          </label>
           <div class="bubble-settling" id="bubbleSettling" hidden>
             <div class="settling-bubble" id="settlingBubble">
               <div class="bubble-glass"></div>
@@ -469,6 +476,7 @@
       <h3>关于 CycleBubble</h3>
       <p>你在这里写下的每一刻，都会慢慢沉到 Bubble 里。</p>
       <p>有些你自己都会忘记的瞬间，Bubble 会替你记着。等到某一天回望，也许你会发现，自己已经悄悄走了一段路。</p>
+      <p><strong>关于 AI 辅助理解：</strong>Bubble 使用 AI 辅助理解你的情绪记录（默认供应商：MiniMax）。你的原始文本会被发送给该供应商用于结构化分析；管理员可在后台调整供应商、模型，或关闭 AI 上传（关闭后仅走关键词/规则降级）。安全网（危机词检测）始终在本地运行，与 AI 开关无关。</p>
       <p>如果情绪长期困扰你，记得也找专业人士聊聊。</p>
       <button class="about-close" type="button" id="aboutClose">嗯</button>
       <button class="about-reset" type="button" id="aboutReset" onclick="window.__bubbleReset && window.__bubbleReset()">重新开始</button>

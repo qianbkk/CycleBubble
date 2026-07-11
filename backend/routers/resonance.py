@@ -65,11 +65,16 @@ def get_resonance_feed(
 ):
     """获取匿名化的公开故事流
 
-    返回当前用户可见的公开记忆（按时间倒序，匿名化）
+    返回当前用户可见的公开记忆（按时间倒序，匿名化）。
+    is_sensitive=true 的记忆无论 is_public 如何都不进入 feed（spec v2 B.4 强约束）。
     """
     public_memories = session.exec(
         select(Memory)
-        .where(Memory.is_public == True, Memory.user_id != current_user.id)
+        .where(
+            Memory.is_public == True,
+            Memory.is_sensitive == False,
+            Memory.user_id != current_user.id,
+        )
         .order_by(Memory.created_at.desc())
         .limit(limit)
     ).all()
@@ -121,6 +126,10 @@ def respond_to_memory(
     # 私密记忆不对外暴露，只有公开记忆才允许回应
     # 防止通过 memory_id 枚举绕过私密性
     if not memory.is_public:
+        raise HTTPException(status_code=404, detail="记忆不存在")
+
+    # 敏感记忆不允许被回应（spec v2 B.4）
+    if memory.is_sensitive:
         raise HTTPException(status_code=404, detail="记忆不存在")
 
     if memory.user_id == current_user.id:
