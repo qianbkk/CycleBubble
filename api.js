@@ -263,6 +263,20 @@
     }
   };
 
+  // ===== 举报 =====
+  const reports = {
+    async create(memoryId, reason, note) {
+      return await request('/api/reports', {
+        method: 'POST',
+        body: JSON.stringify({
+          memory_id: memoryId,
+          reason: reason,
+          note: note || ''
+        })
+      });
+    }
+  };
+
   // ===== 暴露到全局 =====
   window.CB_API = {
     BASE: BASE,
@@ -272,6 +286,7 @@
     resonance: resonance,
     growth: growth,
     profile: profile,
+    reports: reports,
     getToken: getToken,
     clearToken: clearToken,
     isDemoMode: isDemoMode,

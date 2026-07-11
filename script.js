@@ -66,94 +66,9 @@
   }
 
   // ====== Memory 结构化抽取 ======
-  // 每条 Bubble 自动抽取结构化字段。
-  // 这是模拟版：真实产品应由 AI Agent 抽取，这里用关键词匹配模拟。
-
-  var themeKeywords = {
-    "认可": ["认可", "肯定", "表扬", "夸", "被看见", "价值", "有没有被", "被需要"],
-    "工作": ["工作", "开会", "领导", "同事", "老板", "项目", "加班", "任务", "报告", "绩效"],
-    "家庭": ["妈妈", "爸爸", "家", "家里", "父母", "弟弟", "姐姐", "哥哥", "家人"],
-    "关系": ["朋友", "他", "她", "伴侣", "恋爱", "分手", "吵架", "冷战", "陪伴"],
-    "自我": ["我是不是", "太敏感", "不够好", "为什么我", "是不是我", "自己"],
-    "身体": ["累", "疲惫", "失眠", "疼", "不舒服", "周期", "生理期", "黄体"],
-    "表达": ["说出来", "表达", "反驳", "没说出口", "想试", "终于说", "开口"]
-  };
-
-  var triggerKeywords = {
-    "评价": ["评价", "批评", "指责", "说了一句", "领导说", "被说"],
-    "比较": ["比别人", "都比我", "别人都", "为什么别人"],
-    "冲突": ["吵架", "争执", "冷战", "冲突", "矛盾"],
-    "变化": ["变了", "突然", "第一次", "没想到"],
-    "周期": ["这个阶段", "又到了", "生理期", "黄体", "激素"]
-  };
-
-  var recoveryKeywords = {
-    "表达": ["说出来", "写下来", "记录", "倾诉", "聊了"],
-    "独处": ["一个人", "安静", "离开一下", "待着", "空间"],
-    "连接": ["朋友", "聊", "陪伴", "分享"],
-    "运动": ["运动", "跑步", "走路", "瑜伽"],
-    "创作": ["画画", "写", "画", "音乐", "创作"]
-  };
-
-  var emotionKeywords = {
-    "焦虑": ["焦虑", "担心", "怕", "紧张", "不安", "反复想", "纠结"],
-    "委屈": ["委屈", "不公平", "凭什么", "为什么我"],
-    "愤怒": ["生气", "气", "愤怒", "烦", "讨厌"],
-    "低落": ["低落", "难过", "哭", "丧", "没力气", "空虚"],
-    "平静": ["平静", "还好", "释然", "接受", "放下"],
-    "温暖": ["温暖", "感动", "开心", "幸福", "感激"],
-    "力量": ["力量", "勇气", "决定", "终于", "突破"]
-  };
-
-  function extractField(text, keywordMap) {
-    var found = [];
-    for (var category in keywordMap) {
-      var words = keywordMap[category];
-      for (var i = 0; i < words.length; i++) {
-        if (text.indexOf(words[i]) !== -1) {
-          if (found.indexOf(category) === -1) found.push(category);
-          break;
-        }
-      }
-    }
-    return found;
-  }
-
-  function extractMemory(rawText, timeLabel) {
-    var text = rawText || "";
-    var themes = extractField(text, themeKeywords);
-    var triggers = extractField(text, triggerKeywords);
-    var recovery = extractField(text, recoveryKeywords);
-    var emotions = extractField(text, emotionKeywords);
-
-    // 表达方式推断
-    var expressionStyle = "倾诉";
-    if (/[？?]/.test(text) && text.length < 60) expressionStyle = "提问";
-    else if (/我想|我想试|下次|打算|要/.test(text)) expressionStyle = "反思";
-    else if (/终于|决定|突破/.test(text)) expressionStyle = "行动";
-
-    // 是否提到行动
-    var hasAction = /终于|决定|试|开始|下次|打算/.test(text);
-
-    // 情绪基调（取第一个匹配的情绪，或"未明"）
-    var mood = emotions.length > 0 ? emotions[0] : "未明";
-
-    return {
-      id: "m_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-      time: Date.now(),
-      timeLabel: timeLabel || "今天",
-      rawText: text,
-      snippet: text.length > 50 ? text.substring(0, 50) + "……" : text,
-      themes: themes,
-      triggers: triggers,
-      recovery: recovery,
-      emotions: emotions,
-      mood: mood,
-      expressionStyle: expressionStyle,
-      hasAction: hasAction,
-      source: "self"
-    };
-  }
+  // 已移除前端关键词匹配和 extractMemory()。结构化字段完全由后端提供：
+  // - 真实模式：后端 AI 提取（失败时按后端关键词后备）
+  // - 演示模式：seed_demo.py 预置
 
   // ====== 不再注入前端硬编码种子记忆 ======
   // 双数据库架构下，demo 模式的种子数据从 cyclebubble_demo.db 读取（后端 seed_demo.py 预置）。
@@ -775,6 +690,14 @@
   }
 
   // 渲染单张共鸣卡片（DOM 结构与 HTML 中的种子卡片一致，class 全保留）
+  // data-response 使用后端 VALID_RESPONSE_TYPES 中的中文枚举
+  var RESPONSE_CHIP_LABELS = {
+    "我也经历过": "我也经历过",
+    "谢谢": "谢谢你的分享",
+    "抱抱": "抱抱你",
+    "继续说": "继续说",
+    "分享我的经历": "分享我的经历"
+  };
   function buildResonanceCardFromStory(story, index) {
     var inlineStyle = "border:1.5px solid rgba(181,169,207,.3);border-radius:36px 36px 32px 32px;background:radial-gradient(ellipse at 30% 0%,rgba(245,217,216,.4),transparent 50%),radial-gradient(ellipse at 70% 100%,rgba(240,237,247,.45),transparent 50%),linear-gradient(180deg,rgba(255,253,251,.99),rgba(248,244,250,.92));box-shadow:0 20px 48px rgba(82,63,74,.12),inset 0 2px 0 rgba(255,255,255,.8);";
     var activeClass = (index === 0) ? " active" : "";
@@ -784,18 +707,21 @@
       return ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c];
     });
     var html = "";
-    html += '<section class="resonance-card' + activeClass + '" style="' + inlineStyle + '" data-index="' + index + '">';
+    html += '<section class="resonance-card' + activeClass + '" style="' + inlineStyle + '" data-index="' + index + '" data-memory-id="' + (story.id || 0) + '">';
     html += '<p class="anonymous">匿名泡泡 ' + num + '</p>';
     html += '<p class="quote">"' + text + '"</p>';
     html += '<div class="response-options">';
-    html += '<button type="button" class="response-chip" data-response="empathy">我也经历过</button>';
-    html += '<button type="button" class="response-chip" data-response="thanks">谢谢你的分享</button>';
-    html += '<button type="button" class="response-chip" data-response="hug">抱抱你</button>';
-    html += '<button type="button" class="response-chip response-chip--expand" data-response="share">分享我的经历</button>';
+    html += '<button type="button" class="response-chip" data-response="我也经历过">我也经历过</button>';
+    html += '<button type="button" class="response-chip" data-response="谢谢">谢谢你的分享</button>';
+    html += '<button type="button" class="response-chip" data-response="抱抱">抱抱你</button>';
+    html += '<button type="button" class="response-chip response-chip--expand" data-response="分享我的经历">分享我的经历</button>';
     html += '</div>';
     html += '<div class="response-expand" hidden>';
     html += '<textarea class="response-input" placeholder="如果你愿意，可以写一点自己的经历……"></textarea>';
     html += '<button type="button" class="response-send">送出</button>';
+    html += '</div>';
+    html += '<div class="resonance-card-footer">';
+    html += '<button type="button" class="resonance-report-btn" data-memory-id="' + (story.id || 0) + '">举报</button>';
     html += '</div>';
     html += '</section>';
     return html;
@@ -846,6 +772,55 @@
     if (totalCards > 0 && resonanceCards[0]) resonanceCards[0].classList.add("active");
     bindResponseChips();
     bindResponseSends();
+    bindReportButtons();
+  }
+
+  function bindReportButtons() {
+    var btns = document.querySelectorAll(".resonance-card .resonance-report-btn");
+    for (var i = 0; i < btns.length; i++) {
+      (function (btn) {
+        btn.addEventListener("click", function () {
+          var card = btn.closest(".resonance-card");
+          if (!card) return;
+          openReportPanel(card, parseInt(btn.getAttribute("data-memory-id") || "0", 10));
+        });
+      })(btns[i]);
+    }
+  }
+
+  function openReportPanel(card, memoryId) {
+    if (!card || !memoryId) return;
+    var existing = card.querySelector(".resonance-report-panel");
+    if (existing) { existing.remove(); return; }
+    var panel = document.createElement("div");
+    panel.className = "resonance-report-panel";
+    panel.innerHTML =
+      '<select class="resonance-report-reason">' +
+      '<option value="spam">垃圾广告</option>' +
+      '<option value="harassment">人身攻击</option>' +
+      '<option value="self_harm_concern">涉及自我伤害</option>' +
+      '<option value="other">其他</option>' +
+      '</select>' +
+      '<textarea class="resonance-report-note" rows="2" placeholder="补充说明（选填）"></textarea>' +
+      '<div class="resonance-report-actions">' +
+      '<button type="button" class="btn-link resonance-report-cancel">取消</button>' +
+      '<button type="button" class="btn-primary resonance-report-submit">提交举报</button>' +
+      '</div>';
+    card.querySelector(".resonance-card-footer").after(panel);
+    panel.querySelector(".resonance-report-cancel").addEventListener("click", function () {
+      panel.remove();
+    });
+    panel.querySelector(".resonance-report-submit").addEventListener("click", async function () {
+      if (isDemoMode) { showDemoToast("演示模式只读，登录后可以举报"); return; }
+      var reason = panel.querySelector(".resonance-report-reason").value;
+      var note = panel.querySelector(".resonance-report-note").value.trim();
+      try {
+        await CB_API.reports.create(memoryId, reason, note);
+        panel.innerHTML = '<p style="margin:0;color:var(--subtle);font-size:12px;">已提交，感谢你的反馈。</p>';
+      } catch (e) {
+        showDemoToast(e.message || "举报失败");
+      }
+    });
   }
 
   function bindResponseChips() {
@@ -856,7 +831,8 @@
         var card = this.closest(".resonance-card");
         if (!card) return;
 
-        if (responseType === "share") {
+        // "分享我的经历" 是展开输入框的特殊动作，不立即发送
+        if (responseType === "分享我的经历") {
           var expand = card.querySelector(".response-expand");
           if (expand) {
             expand.hidden = !expand.hidden;
@@ -875,21 +851,11 @@
         this.classList.add("responded");
         this.textContent = "已送出";
 
-        bubbleDNA.totalResponses++;
-        bubbleDNA.relationshipSignals.push({
-          type: responseType,
-          time: Date.now(),
-          source: "resonance"
-        });
-        bubbleDNA.evolution.push({
-          type: "response_given",
-          time: Date.now(),
-          responseType: responseType
-        });
-        saveDNA();
+        sendResponseToBackend(card, responseType, null);
+        trackLocalResponse(responseType, null);
 
-        if (responseType === "empathy") addLightPoint("connection");
-        else if (responseType === "hug") addLightPoint("warmth");
+        if (responseType === "我也经历过") addLightPoint("connection");
+        else if (responseType === "抱抱") addLightPoint("warmth");
         else addLightPoint("connection");
 
         setTimeout(nextCard, 1500);
@@ -905,20 +871,10 @@
         if (!card) return;
         var input = card.querySelector(".response-input");
         if (input && input.value.trim()) {
-          bubbleDNA.totalResponses++;
           var sharedText = input.value.trim().substring(0, 80);
-          bubbleDNA.relationshipSignals.push({
-            type: "share",
-            content: sharedText,
-            time: Date.now(),
-            source: "resonance"
-          });
-          bubbleDNA.evolution.push({
-            type: "experience_shared",
-            time: Date.now(),
-            content: sharedText
-          });
-          saveDNA();
+          trackLocalResponse("分享我的经历", sharedText);
+
+          sendResponseToBackend(card, "分享我的经历", sharedText);
 
           addLightPoint("warmth");
           addLightPoint("connection");
@@ -935,6 +891,35 @@
         }
       });
     }
+  }
+
+  function trackLocalResponse(responseType, content) {
+    bubbleDNA.totalResponses++;
+    bubbleDNA.relationshipSignals.push({
+      type: responseType,
+      content: content || null,
+      time: Date.now(),
+      source: "resonance"
+    });
+    bubbleDNA.evolution.push({
+      type: content ? "experience_shared" : "response_given",
+      time: Date.now(),
+      responseType: responseType,
+      content: content || null
+    });
+    saveDNA();
+  }
+
+  function sendResponseToBackend(card, responseType, content) {
+    if (!card) return;
+    var memoryId = parseInt(card.getAttribute("data-memory-id") || "0", 10);
+    if (!memoryId) return;
+    if (isDemoMode) return; // 演示模式只走本地兜底
+    if (!window.CB_API || !CB_API.resonance || !CB_API.resonance.respond) return;
+    CB_API.resonance.respond(memoryId, responseType, content).catch(function (err) {
+      console.warn("回应发送失败:", err);
+      showDemoToast("回应未送达，请稍后再试");
+    });
   }
 
   // 立即触发一次周期状态加载（首页文案）
@@ -1086,7 +1071,10 @@
   // 异步加载成长数据，并刷新影响卡片（不阻塞页面渲染）
   async function loadAndApplyGrowthData() {
     var data = await loadGrowthData();
-    if (!data) return;
+    if (!data) {
+      // 后端不可达：保持本地 renderGrowthPage 已渲染的内容
+      return;
+    }
 
     // 空状态：后端没有数据 → 显示空状态元素、隐藏主内容
     var empty = document.getElementById("growthEmptyState");
@@ -1105,7 +1093,6 @@
       if (storiesSection) storiesSection.style.display = "none";
       if (impactSection) impactSection.style.display = "none";
       if (resonanceLead) resonanceLead.style.display = "none";
-      // 空状态下隐藏 action-stack（去看看她们的故事 按钮）
       var actionStack = screen ? screen.querySelector(".action-stack") : null;
       if (actionStack) actionStack.style.display = "none";
       return;
@@ -1120,11 +1107,27 @@
     var actionStack2 = screen ? screen.querySelector(".action-stack") : null;
     if (actionStack2) actionStack2.style.display = "";
 
+    // 优先使用后端 discoveries + timeline
+    if (Array.isArray(data.discoveries) && data.discoveries.length > 0) {
+      renderBackendDiscoveries(data.discoveries);
+    } else if (!isDemoMode) {
+      // 真实账号且后端无发现 → 隐藏发现区
+      if (storiesSection) storiesSection.style.display = "none";
+    }
+
+    if (Array.isArray(data.timeline) && data.timeline.length > 0) {
+      renderBackendTimeline(data.timeline);
+    } else if (!isDemoMode) {
+      // 真实账号且后端无 timeline → 显示本地记忆列表
+      renderLocalTimeline();
+    } else {
+      renderLocalTimeline();
+    }
+
     // 更新影响数字（如果后端给了）
     var impactText = document.querySelector(".impact-text");
     if (impactText && data.impact) {
       var accompanied = (data.impact.accompanied_count != null) ? data.impact.accompanied_count : (3 + bubbleDNA.totalResponses);
-      var impactSub = impactText.parentNode.querySelector(".impact-sub");
       impactText.innerHTML = "你的经历，陪伴了 <strong>" + accompanied + " 位</strong>正在经历相似感受的人。";
     }
 
@@ -1133,6 +1136,71 @@
     if (similarEl && data.impact && data.impact.similar_phase_count != null) {
       similarEl.textContent = data.impact.similar_phase_count + ' 位';
     }
+  }
+
+  function renderBackendDiscoveries(discoveries) {
+    var storiesEl = document.getElementById("growthStories");
+    var storiesSection = storiesEl ? storiesEl.closest('.growth-stories-section') : null;
+    if (!storiesEl) return;
+    if (storiesSection) storiesSection.style.display = '';
+    var html = '';
+    for (var i = 0; i < discoveries.length; i++) {
+      var d = discoveries[i] || {};
+      html += '<div class="growth-story-card growth-story-card--single">';
+      html += '<span class="growth-story-tag">' + (d.title || "发现") + '</span>';
+      html += '<p class="growth-story-text">' + (d.content || "") + '</p>';
+      if (d.evidence_count) {
+        html += '<p class="growth-story-meta">基于 ' + d.evidence_count + ' 条记录</p>';
+      }
+      html += '</div>';
+    }
+    storiesEl.innerHTML = html;
+  }
+
+  function renderBackendTimeline(timeline) {
+    var timelineEl = document.getElementById("memoryTimeline");
+    if (!timelineEl) return;
+    var html = '';
+    for (var i = 0; i < timeline.length; i++) {
+      var item = timeline[i] || {};
+      html += '<div class="memory-entry">';
+      html += '<span class="memory-dot"></span>';
+      html += '<div class="memory-content">';
+      html += '<span class="memory-time">' + (item.week || "") + '</span>';
+      html += '<p class="memory-snippet">' + (item.first_text || "") + '</p>';
+      if (item.count) {
+        html += '<span class="memory-theme">本周 ' + item.count + ' 条</span>';
+      }
+      html += '</div></div>';
+    }
+    timelineEl.innerHTML = html;
+  }
+
+  function renderLocalTimeline() {
+    var timelineEl = document.getElementById("memoryTimeline");
+    if (!timelineEl) return;
+    var allMemories = bubbleDNA.memories;
+    var html = "";
+    if (allMemories.length === 0) {
+      html += '<div class="memory-empty">Bubble 还在等待你的第一次表达。</div>';
+    } else if (allMemories.length <= 2) {
+      for (var i = allMemories.length - 1; i >= 0; i--) {
+        var m = allMemories[i];
+        var isLatest = (i === allMemories.length - 1);
+        html += buildMemoryEntry(m, isLatest);
+        if (i > 0) html += '<span class="memory-line"></span>';
+      }
+    } else {
+      var earliest = allMemories[0];
+      var latest = allMemories[allMemories.length - 1];
+      var hiddenCount = allMemories.length - 2;
+      html += buildMemoryEntry(latest, true);
+      html += '<span class="memory-line"></span>';
+      html += '<div class="memory-gap">还有 ' + hiddenCount + ' 条沉淀</div>';
+      html += '<span class="memory-line"></span>';
+      html += buildMemoryEntry(earliest, false);
+    }
+    timelineEl.innerHTML = html;
   }
 
   function renderOneGrowthStory(container, stories) {
@@ -1555,13 +1623,9 @@
             switchTo("insight");
             applyBubbleState();
           }).catch(function (err) {
-            // 后端失败：兜底到 localStorage 但提示
+            // 后端失败：不静默写本地（避免演示模式记忆伪装成真实记录）
             console.warn('保存到后端失败:', err);
-            showDemoToast('保存失败，请检查网络');
-            var newMemory = extractMemory(userInput, "今天");
-            bubbleDNA.memories.push(newMemory);
-            bubbleDNA.totalRecords++;
-            saveDNA();
+            showDemoToast('保存失败，请稍后再试');
             switchTo("insight");
             applyBubbleState();
           });
@@ -1580,11 +1644,28 @@
   }
 
   // 真实模式：调后端 POST /api/memories，成功后用后端返回的数据更新 bubbleDNA
+  function isRecordPublicChecked() {
+    var box = document.getElementById('recordIsPublic');
+    return !!(box && box.checked);
+  }
+
+  function ackFirstPublic() {
+    try {
+      if (localStorage.getItem('cb_public_ack') === '1') return true;
+      localStorage.setItem('cb_public_ack', '1');
+    } catch (e) { return false; }
+    return false;
+  }
+
   async function persistMemoryToBackend(rawText) {
     if (!window.CB_API || !CB_API.memory || !CB_API.memory.create) {
       throw new Error('API 不可用');
     }
-    var resp = await CB_API.memory.create(rawText, false);
+    var isPublic = isRecordPublicChecked();
+    if (isPublic && !ackFirstPublic()) {
+      showDemoToast('记录将匿名出现在共鸣流，请确认内容可以分享');
+    }
+    var resp = await CB_API.memory.create(rawText, isPublic);
     if (!resp || !resp.id) {
       throw new Error('后端响应无效');
     }
@@ -1641,97 +1722,9 @@
     lightPoints.appendChild(point);
   }
 
-  // 回应芯片点击（Relationship 维度采集）
-  var responseChips = document.querySelectorAll(".response-chip");
-  for (var r = 0; r < responseChips.length; r++) {
-    responseChips[r].addEventListener("click", function () {
-      var responseType = this.getAttribute("data-response");
-      var card = this.closest(".resonance-card");
-
-      if (responseType === "share") {
-        var expand = card.querySelector(".response-expand");
-        if (expand) {
-          expand.hidden = !expand.hidden;
-          if (!expand.hidden) {
-            var input = expand.querySelector(".response-input");
-            if (input) input.focus();
-          }
-        }
-        return;
-      }
-
-      var allChips = card.querySelectorAll(".response-chip");
-      for (var c = 0; c < allChips.length; c++) {
-        allChips[c].disabled = true;
-      }
-      this.classList.add("responded");
-      this.textContent = "已送出";
-
-      // 记录 Relationship 信号
-      bubbleDNA.totalResponses++;
-      bubbleDNA.relationshipSignals.push({
-        type: responseType,
-        time: Date.now(),
-        source: "resonance"
-      });
-
-      // 记录 Evolution
-      bubbleDNA.evolution.push({
-        type: "response_given",
-        time: Date.now(),
-        responseType: responseType
-      });
-
-      saveDNA();
-
-      if (responseType === "empathy") addLightPoint("connection");
-      else if (responseType === "hug") addLightPoint("warmth");
-      else addLightPoint("connection");
-
-      setTimeout(nextCard, 1500);
-    });
-  }
-
-  // 送出经历（更高权重的 Relationship 信号）
-  var responseSends = document.querySelectorAll(".response-send");
-  for (var s = 0; s < responseSends.length; s++) {
-    responseSends[s].addEventListener("click", function () {
-      var card = this.closest(".resonance-card");
-      var input = card.querySelector(".response-input");
-      if (input && input.value.trim()) {
-        bubbleDNA.totalResponses++;
-        var sharedText = input.value.trim().substring(0, 80);
-        bubbleDNA.relationshipSignals.push({
-          type: "share",
-          content: sharedText,
-          time: Date.now(),
-          source: "resonance"
-        });
-
-        bubbleDNA.evolution.push({
-          type: "experience_shared",
-          time: Date.now(),
-          content: sharedText
-        });
-
-        saveDNA();
-
-        addLightPoint("warmth");
-        addLightPoint("connection");
-
-        var expand = card.querySelector(".response-expand");
-        if (expand) expand.hidden = true;
-
-        var allChips = card.querySelectorAll(".response-chip");
-        for (var c = 0; c < allChips.length; c++) {
-          allChips[c].disabled = true;
-        }
-
-        input.value = "";
-        setTimeout(nextCard, 1500);
-      }
-    });
-  }
+  // 回应芯片与送出按钮的逻辑已统一由 bindResponseChips / bindResponseSends 处理
+  // 真正共鸣卡（renderResonanceFeed 渲染）会调用这两个函数。
+  // 此处保留空占位，避免对未来静态卡片重复绑定。
 
   // ====== 关于弹层 ======
   var aboutLink = document.getElementById("aboutLink");
