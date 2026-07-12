@@ -40,7 +40,23 @@
     let data;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = { detail: text }; }
     if (!res.ok) {
-      throw new Error((data && data.detail) ? data.detail : ('HTTP ' + res.status));
+      // FastAPI 422 校验错误时 detail 是数组，必须提取 msg 拼成字符串
+      var detailx = (data && data.detail) || null;
+      var errorMsg = 'HTTP ' + res.status;
+      if (detailx) {
+        if (typeof detailx === 'string') {
+          errorMsg = detailx;
+        } else if (Array.isArray(detailx)) {
+          var msgs = [];
+          for (var di = 0; di < detailx.length; di++) {
+            if (detailx[di] && detailx[di].msg) msgs.push(detailx[di].msg);
+          }
+          errorMsg = msgs.length > 0 ? msgs.join('；') : errorMsg;
+        } else if (typeof detailx === 'object') {
+          errorMsg = detailx.msg || detailx.message || errorMsg;
+        }
+      }
+      throw new Error(errorMsg);
     }
     return data;
   }
