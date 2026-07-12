@@ -306,11 +306,26 @@
     status.textContent = '测试中...';
     try {
       var r = await request('/admin/ai/test', { method: 'POST' });
-      if (r.ok) {
-        status.textContent = '✅ 连接成功 · ' + r.provider + ' / ' + r.model + ' · ' + r.latency_ms + 'ms';
-      } else {
-        status.textContent = '❌ ' + (r.error || '失败');
+      // 新结构：{ ok, primary_provider, providers: { minimax: {...}, deepseek: {...} } }
+      // 兼容旧结构：{ ok, provider, model, latency_ms }
+      var providers = r.providers || (r.provider ? { [r.provider]: r } : null);
+      if (!providers) {
+        status.textContent = '❌ ' + (r.error || '返回结构异常');
+        return;
       }
+      var parts = [];
+      var anyOk = false;
+      Object.keys(providers).forEach(function (pname) {
+        var p = providers[pname];
+        if (p.ok) {
+          anyOk = true;
+          parts.push(pname + ' ✅ ' + p.latency_ms + 'ms (' + p.model + ')');
+        } else {
+          parts.push(pname + ' ❌ ' + (p.error || p.status_code || '失败'));
+        }
+      });
+      var tag = r.primary_provider ? ' [主: ' + r.primary_provider + ']' : '';
+      status.textContent = (anyOk ? '✅ ' : '❌ ') + tag + ' ' + parts.join(' · ');
     } catch (e) {
       status.textContent = '❌ ' + (e.message || '测试失败');
     }

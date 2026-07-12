@@ -41,7 +41,13 @@ def _ensure_demo_user():
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    # 公网关闭 Swagger UI / Redoc / OpenAPI schema，避免 API 拓扑 + admin 端点
+    # 完全暴露给攻击者（"Try it out" 让探测变得非常容易）。
+    # 开发时可设 CB_API_DOCS_ENABLED=true 临时开启。
+    docs_url="/docs" if settings.api_docs_enabled else None,
+    redoc_url="/redoc" if settings.api_docs_enabled else None,
+    openapi_url="/openapi.json" if settings.api_docs_enabled else None,
 )
 
 # CORS 配置：白名单模式 + 不带 credentials
@@ -72,4 +78,24 @@ def root():
 
 @app.get("/api/health")
 def health():
+    """轻量健康检查（不查数据库，给 LB / 外层探活用）"""
     return {"status": "ok"}
+
+@app.get("/api/healthz")
+def healthz():
+    """深度健康检查（查数据库 + 关键表是否存在）
+
+    用来判断"代码迁移是否成功"——例如新增字段后 create_all 漏掉，
+    这里会返回 "db":"missing_table" 而不是 fake-ok。
+    部署脚本（cyclebubble-update.sh）通过本接口判断回滚。
+    """
+    from .models import User, Memory, Cycle
+    try:
+        with Session(real_engine) as session:
+            session.exec(select(User)).first()
+            session.exec(select(Memory)).first()
+            session.exec(select(Cycle)).first()
+        return {"db": "ok", "tables": ["user", "memory", "cycle"], "app": settings.app_name}
+    except Exception as e:
+        # 数据库迁移漏表/字段时这里会失败
+        return {"db": "error", "error": str(e)[:200]}

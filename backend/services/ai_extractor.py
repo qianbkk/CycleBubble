@@ -105,8 +105,12 @@ def _normalize_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _request_minimax(api_key: str, model: str, raw_text: str) -> Dict[str, Any]:
-    """调用 MiniMax API 并返回归一化结果。"""
+async def _request_minimax(client: httpx.AsyncClient, api_key: str, model: str, raw_text: str) -> Dict[str, Any]:
+    """调用 MiniMax API 并返回归一化结果。
+
+    注意：必须用 AsyncClient，不能用同步 httpx.post——同步调用会阻塞
+    FastAPI/uvicorn 的事件循环，等价于把所有 worker 的其他请求都排队挂起。
+    """
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -121,7 +125,7 @@ def _request_minimax(api_key: str, model: str, raw_text: str) -> Dict[str, Any]:
         "response_format": {"type": "json_object"},
     }
     try:
-        resp = httpx.post(
+        resp = await client.post(
             "https://api.minimax.chat/v1/text/chatcompletion_v2",
             headers=headers,
             json=payload,
@@ -143,7 +147,7 @@ def _request_minimax(api_key: str, model: str, raw_text: str) -> Dict[str, Any]:
     return _normalize_payload(data)
 
 
-def _request_deepseek(api_key: str, model: str, raw_text: str) -> Dict[str, Any]:
+async def _request_deepseek(client: httpx.AsyncClient, api_key: str, model: str, raw_text: str) -> Dict[str, Any]:
     """调用 DeepSeek API（OpenAI 兼容格式）并返回归一化结果。"""
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -159,7 +163,7 @@ def _request_deepseek(api_key: str, model: str, raw_text: str) -> Dict[str, Any]
         "response_format": {"type": "json_object"},
     }
     try:
-        resp = httpx.post(
+        resp = await client.post(
             "https://api.deepseek.com/v1/chat/completions",
             headers=headers,
             json=payload,
@@ -181,8 +185,11 @@ def _request_deepseek(api_key: str, model: str, raw_text: str) -> Dict[str, Any]
     return _normalize_payload(data)
 
 
-def _try_single_provider(provider_name: str, raw_text: str) -> Dict[str, Any]:
-    """尝试单个 AI provider。失败时抛 AIUnavailable。"""
+async def _try_single_provider(provider_name: str, raw_text: str) -> Dict[str, Any]:
+    """尝试单个 AI provider。失败时抛 AIUnavailable。
+
+    每次调用创建一个新的 AsyncClient（带共享连接池），避免连接泄漏。
+    """
     provider = PROVIDERS.get(provider_name)
     if not provider or not provider.get("implemented", False):
         raise AIUnavailable(f"provider {provider_name} not available")
@@ -191,10 +198,11 @@ def _try_single_provider(provider_name: str, raw_text: str) -> Dict[str, Any]:
         raise AIUnavailable(f"missing api key for {provider_name}")
     model = get_setting(provider["model_setting"]) or provider["default_model"]
 
-    if provider_name == "minimax":
-        return _request_minimax(api_key, model, raw_text)
-    elif provider_name == "deepseek":
-        return _request_deepseek(api_key, model, raw_text)
+    async with httpx.AsyncClient() as client:
+        if provider_name == "minimax":
+            return await _request_minimax(client, api_key, model, raw_text)
+        elif provider_name == "deepseek":
+            return await _request_deepseek(client, api_key, model, raw_text)
     raise AIUnavailable(f"provider {provider_name} not implemented")
 
 
@@ -241,7 +249,7 @@ async def extract_memory(raw_text: str) -> Dict[str, Any]:
     last_error = None
     for pname in providers_to_try:
         try:
-            return _try_single_provider(pname, raw_text)
+            return await _try_single_provider(pname, raw_text)
         except AIUnavailable as e:
             logger.warning("AI provider %s failed, %s", pname,
                            "trying fallback" if pname != providers_to_try[-1] else "no more fallback")

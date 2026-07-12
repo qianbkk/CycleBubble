@@ -433,12 +433,24 @@ async def admin_ai_test(
     request: Request,
     username: str = Depends(require_admin),
 ):
-    """测试所有已配置 API Key 的 AI provider 连通性，返回按 provider 分组的结果。"""
+    """测试所有已配置 API Key 的 AI provider 连通性，返回按 provider 分组的结果。
+
+    返回结构（与 admin.js 联动）：
+    {
+      "ok": <bool, 至少一个 provider 成功>,
+      "primary_provider": "<minimax|deepseek>",
+      "providers": {
+        "minimax": {"ok", "model", "latency_ms", "status_code", "error"},
+        "deepseek": {...}
+      }
+    }
+    """
     _audit(request, username, "ai_test", "ai_settings")
     if get_setting(KEY_ENABLE_THIRD_PARTY, "true") != "true":
         return {"ok": False, "error": "third-party AI disabled"}
 
     import time
+    import asyncio
     import httpx
 
     # 定义各 provider 的测试配置
@@ -457,37 +469,46 @@ async def admin_ai_test(
         },
     }
 
-    results = {}
-    any_ok = False
-    for pname, cfg in providers_cfg.items():
+    async def _test_one(pname: str, cfg: dict) -> tuple:
+        """测试单个 provider，返回 (pname, result_dict)。"""
         api_key = get_setting(cfg["key_setting"], "")
         if not api_key:
-            results[pname] = {"ok": False, "error": "missing api key", "latency_ms": None}
-            continue
+            return pname, {"ok": False, "error": "missing api key", "latency_ms": None}
         model = cfg["model"]
         started = time.time()
         try:
-            resp = httpx.post(
-                cfg["endpoint"],
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json=cfg["body_fmt"](model),
-                timeout=settings.ai_request_timeout_seconds,
-            )
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    cfg["endpoint"],
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json=cfg["body_fmt"](model),
+                    timeout=settings.ai_request_timeout_seconds,
+                )
             latency_ms = int((time.time() - started) * 1000)
             ok = resp.status_code == 200
-            results[pname] = {
+            return pname, {
                 "ok": ok,
                 "model": model,
                 "latency_ms": latency_ms,
                 "status_code": resp.status_code,
                 "error": None if ok else resp.text[:200],
             }
-            if ok:
-                any_ok = True
         except Exception as e:
-            results[pname] = {"ok": False, "model": model, "latency_ms": int((time.time() - started) * 1000), "error": str(e)[:200]}
+            return pname, {
+                "ok": False,
+                "model": model,
+                "latency_ms": int((time.time() - started) * 1000),
+                "error": str(e)[:200],
+            }
 
+    # 并发测试所有 provider（不等一个完成再测另一个），加速 admin 后台体验
+    tasks = [_test_one(pname, cfg) for pname, cfg in providers_cfg.items()]
+    pairs = await asyncio.gather(*tasks, return_exceptions=False)
+
+    results = {pname: result for pname, result in pairs}
+    any_ok = any(r.get("ok") for r in results.values())
     primary = get_setting(KEY_DEFAULT_PROVIDER, settings.ai_default_provider)
+
     return {
         "ok": any_ok,
         "primary_provider": primary,
