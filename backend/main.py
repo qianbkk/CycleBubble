@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from .config import settings
 from .database import init_db, demo_engine
@@ -49,6 +51,44 @@ app = FastAPI(
     redoc_url="/redoc" if settings.api_docs_enabled else None,
     openapi_url="/openapi.json" if settings.api_docs_enabled else None,
 )
+
+# Pydantic 校验错误消息中文化
+# FastAPI 默认返回英文（如 "String should have at least 8 characters"），
+# 前端直接显示给用户看不懂。这里通过异常处理器统一翻译。
+_ZH_VALIDATION_MSGS = {
+    "String should have at least ":         "不能少于 ",
+    "String should have at most ":          "不能超过 ",
+    " characters":                          " 个字符",
+    "value is not a valid email address: An email address must have an @-sign.": "邮箱格式不正确（必须包含 @ 符号）",
+    "value is not a valid email address":   "邮箱格式不正确",
+    "An email address must have an @-sign": "邮箱必须包含 @ 符号",
+    "Field required":                       "该字段为必填项",
+    "Input should be a valid string":       "请输入有效的字符串",
+    "Input should be a valid integer":      "请输入有效的整数",
+    "Input should be a valid boolean":      "请输入有效的布尔值",
+    "extra fields not permitted":           "不允许的额外字段",
+}
+
+
+def _zh_validation_msg(en_msg: str) -> str:
+    for en_part, zh_part in _ZH_VALIDATION_MSGS.items():
+        if en_part in en_msg:
+            en_msg = en_msg.replace(en_part, zh_part)
+    return en_msg
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_exception_handler(request, exc: RequestValidationError):
+    errors = exc.errors()
+    translated = []
+    for err in errors:
+        loc = ".".join(str(x) for x in (err.get("loc") or []))
+        msg = _zh_validation_msg(err.get("msg", "") or "")
+        translated.append({"loc": loc, "msg": msg, "type": err.get("type", "")})
+    return JSONResponse(
+        status_code=422,
+        content={"detail": translated},
+    )
 
 # CORS 配置：白名单模式 + 不带 credentials
 # 浏览器通过 Bearer Token 认证，不依赖 Cookie/credentials
