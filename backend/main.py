@@ -89,6 +89,7 @@ def healthz():
     这里会返回 "db":"missing_table" 而不是 fake-ok。
     部署脚本（cyclebubble-update.sh）通过本接口判断回滚。
     """
+    from .database import real_engine
     from .models import User, Memory, Cycle
     try:
         with Session(real_engine) as session:
