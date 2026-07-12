@@ -2029,61 +2029,66 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
 }
 
 /* ---- Genesis Bubble 主体 ---- */
+/* 微阶段 0：初始状态，几乎不可见 */
 .genesis-bubble {
   position: relative;
   width: 200px;
   aspect-ratio: 1;
   border-radius: 50%;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,.15);
-  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.08), transparent 42%);
-  box-shadow: 0 0 20px rgba(181,169,207,.04);
-  opacity: .12;
-  transition: opacity 2.5s ease-in-out, box-shadow 2.5s ease-in-out, background 2.5s ease-in-out, border-color 2.5s ease-in-out;
+  border: 1px solid rgba(255,255,255,.08);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.04), transparent 42%);
+  box-shadow: 0 0 10px rgba(181,169,207,.02);
+  opacity: .06;
+  transition: opacity 3s ease-in-out, box-shadow 3s ease-in-out, background 3s ease-in-out, border-color 3s ease-in-out;
 }
 
-/* Phase 1：轮廓初现，与文字同步淡入，像正在形成 */
+/* 微阶段 1 (Phase 1)：极淡轮廓初现，像正在形成 */
 .genesis-overlay[data-phase="1"] .genesis-bubble {
-  opacity: .18;
-  border-color: rgba(255,255,255,.28);
-  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.12), transparent 40%);
-  box-shadow: 0 0 30px rgba(181,169,207,.06);
+  opacity: .10;
+  border-color: rgba(255,255,255,.18);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.06), transparent 40%);
+  box-shadow: 0 0 20px rgba(181,169,207,.04);
+  animation: genesis-breathe 7s ease-in-out infinite;
+}
+
+/* 微阶段 2-3 (Phase 2)：轮廓逐渐清晰 + 轻微发光 */
+.genesis-overlay[data-phase="2"] .genesis-bubble {
+  opacity: .25;
+  border-color: rgba(255,255,255,.38);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.15), rgba(255,255,255,.04) 30%, transparent 40%),
+    linear-gradient(145deg, rgba(255,255,255,.08), rgba(245,217,216,.05));
+  box-shadow: 0 0 30px rgba(181,169,207,.08), inset 3px 6px 16px rgba(255,255,255,.12);
   animation: genesis-breathe 6s ease-in-out infinite;
 }
 
-/* Phase 2：记录留下痕迹，内部开始有变化 */
-.genesis-overlay[data-phase="2"] .genesis-bubble {
-  opacity: .45;
-  border-color: rgba(255,255,255,.5);
-  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.3), rgba(255,255,255,.06) 30%, transparent 40%),
-    linear-gradient(145deg, rgba(255,255,255,.15), rgba(245,217,216,.08));
-  box-shadow: 0 0 40px rgba(181,169,207,.10), inset 4px 8px 20px rgba(255,255,255,.2);
-  animation: genesis-breathe 5s ease-in-out infinite;
-}
-
-/* Phase 3：Pattern 形成，内部层次丰富 */
-.genesis-overlay[data-phase="3"] .genesis-bubble,
-.genesis-overlay[data-phase="4"] .genesis-bubble {
-  opacity: .82;
-  border-color: rgba(255,255,255,.8);
-  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.55), rgba(255,255,255,.14) 26%, transparent 38%),
-    linear-gradient(145deg, rgba(255,255,255,.35), rgba(245,217,216,.2));
+/* 微阶段 4-5 (Phase 3)：纹理形成 + 内部层次丰富 */
+.genesis-overlay[data-phase="3"] .genesis-bubble {
+  opacity: .50;
+  border-color: rgba(255,255,255,.58);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.3), rgba(255,255,255,.08) 26%, transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,.2), rgba(245,217,216,.12));
   box-shadow:
-    inset 10px 14px 36px rgba(255,255,255,.5),
-    inset -8px -12px 32px rgba(181,169,207,.10),
-    0 16px 44px rgba(232,163,167,.12),
-    0 0 44px rgba(181,169,207,.12);
+    inset 7px 10px 28px rgba(255,255,255,.3),
+    inset -5px -8px 24px rgba(181,169,207,.08),
+    0 12px 36px rgba(232,163,167,.08),
+    0 0 36px rgba(181,169,207,.10);
   animation: genesis-breathe 5.5s ease-in-out infinite;
 }
 
-/* Phase 4：沉淀停留，内在深度微增（不增大体积） */
+/* 微阶段 6 + 停留 (Phase 4)：Bubble 完整形成，有深度有呼吸 */
 .genesis-overlay[data-phase="4"] .genesis-bubble {
+  opacity: .75;
+  border-color: rgba(255,255,255,.72);
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.45), rgba(255,255,255,.12) 24%, transparent 36%),
+    linear-gradient(145deg, rgba(255,255,255,.3), rgba(245,217,216,.18));
   box-shadow:
-    inset 12px 16px 40px rgba(255,255,255,.55),
-    inset -10px -14px 36px rgba(181,169,207,.12),
-    inset 0 0 24px rgba(232,163,167,.06),
-    0 16px 48px rgba(232,163,167,.10),
-    0 0 48px rgba(181,169,207,.10);
+    inset 10px 14px 36px rgba(255,255,255,.42),
+    inset -8px -12px 32px rgba(181,169,207,.10),
+    inset 0 0 20px rgba(232,163,167,.05),
+    0 14px 40px rgba(232,163,167,.08),
+    0 0 40px rgba(181,169,207,.08);
+  animation: genesis-breathe 5.8s ease-in-out infinite;
 }
 
 @keyframes genesis-breathe {
@@ -2096,30 +2101,35 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
   position: absolute;
   left: -14%; right: -14%; bottom: -11%;
   z-index: 1;
-  height: 8%;
+  height: 6%;
   overflow: hidden;
   border-radius: 50% 50% 0 0;
-  transition: height 2.5s cubic-bezier(.4,0,.2,1), background 2.5s ease-in-out;
-  background: linear-gradient(180deg, rgba(242,195,199,.12), rgba(184,184,222,.08));
+  transition: height 3s ease-in-out, background 3s ease-in-out;
+  background: linear-gradient(180deg, rgba(242,195,199,.08), rgba(184,184,222,.06));
 }
 
-/* Phase 1：液体几乎不可见 */
+/* Phase 1：液体几乎不存在 */
 .genesis-overlay[data-phase="1"] .genesis-bubble-liquid {
-  height: 10%;
-  background: linear-gradient(180deg, rgba(242,195,199,.15), rgba(184,184,222,.08));
+  height: 7%;
+  background: linear-gradient(180deg, rgba(242,195,199,.1), rgba(184,184,222,.06));
 }
 
-/* Phase 2：记录痕迹开始形成液体层 */
+/* Phase 2：第一层液体形成（记录的痕迹） */
 .genesis-overlay[data-phase="2"] .genesis-bubble-liquid {
-  height: 22%;
-  background: linear-gradient(180deg, rgba(242,195,199,.28), rgba(212,165,207,.16), rgba(184,184,222,.12));
+  height: 15%;
+  background: linear-gradient(180deg, rgba(242,195,199,.2), rgba(212,165,207,.12), rgba(184,184,222,.08));
 }
 
-/* Phase 3：Pattern 形成时液体丰富但不满 */
-.genesis-overlay[data-phase="3"] .genesis-bubble-liquid,
+/* Phase 3：液体逐渐丰富（Pattern 形成中） */
+.genesis-overlay[data-phase="3"] .genesis-bubble-liquid {
+  height: 32%;
+  background: linear-gradient(180deg, rgba(242,195,199,.35), rgba(232,163,167,.22), rgba(212,165,207,.16), rgba(184,184,222,.10));
+}
+
+/* Phase 4：液体沉淀完成（不满，留有空间） */
 .genesis-overlay[data-phase="4"] .genesis-bubble-liquid {
-  height: 52%;
-  background: linear-gradient(180deg, rgba(242,195,199,.45), rgba(232,163,167,.3), rgba(212,165,207,.22), rgba(184,184,222,.15));
+  height: 48%;
+  background: linear-gradient(180deg, rgba(242,195,199,.4), rgba(232,163,167,.28), rgba(212,165,207,.18), rgba(184,184,222,.12));
 }
 
 /* ---- Genesis 玻璃高光 ---- */
@@ -2130,17 +2140,18 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
   border-radius: inherit;
   background: radial-gradient(ellipse at 32% 24%, rgba(255,255,255,.3), transparent 35%);
   pointer-events: none;
-  opacity: .15;
-  transition: opacity 2.5s ease-in-out;
+  opacity: .08;
+  transition: opacity 3s ease-in-out, background 3s ease-in-out;
 }
 
-.genesis-overlay[data-phase="2"] .genesis-bubble-glass { opacity: .3; }
-.genesis-overlay[data-phase="3"] .genesis-bubble-glass { opacity: .6; }
+.genesis-overlay[data-phase="1"] .genesis-bubble-glass { opacity: .1; }
+.genesis-overlay[data-phase="2"] .genesis-bubble-glass { opacity: .2; }
+.genesis-overlay[data-phase="3"] .genesis-bubble-glass { opacity: .45; }
 .genesis-overlay[data-phase="4"] .genesis-bubble-glass {
-  opacity: .85;
-  background: radial-gradient(ellipse at 32% 24%, rgba(255,255,255,.65) 0 13%, rgba(255,255,255,.16) 14% 24%, transparent 35%),
-    radial-gradient(ellipse at 70% 80%, rgba(255,255,255,.14), transparent 34%),
-    linear-gradient(145deg, rgba(255,255,255,.16), transparent 42%);
+  opacity: .7;
+  background: radial-gradient(ellipse at 32% 24%, rgba(255,255,255,.55) 0 13%, rgba(255,255,255,.12) 14% 24%, transparent 35%),
+    radial-gradient(ellipse at 70% 80%, rgba(255,255,255,.1), transparent 34%),
+    linear-gradient(145deg, rgba(255,255,255,.12), transparent 42%);
 }
 
 /* ---- Genesis 纹理层（矿物沉积） ---- */
@@ -2151,12 +2162,11 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
   border-radius: 50%;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 2.5s ease-in-out;
+  transition: opacity 3s ease-in-out;
 }
 
-.genesis-overlay[data-phase="2"] .genesis-texture { opacity: .25; }
-.genesis-overlay[data-phase="3"] .genesis-texture,
-.genesis-overlay[data-phase="4"] .genesis-texture { opacity: .8; }
+.genesis-overlay[data-phase="3"] .genesis-texture { opacity: .6; }
+.genesis-overlay[data-phase="4"] .genesis-texture { opacity: .75; }
 
 /* ---- Genesis 粒子 ---- */
 .genesis-particles {
@@ -2189,10 +2199,9 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
   z-index: 2;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 2.5s ease-in-out;
+  transition: opacity 3s ease-in-out;
 }
 
-.genesis-overlay[data-phase="3"] .genesis-connections,
 .genesis-overlay[data-phase="4"] .genesis-connections {
   opacity: 1;
 }
@@ -2218,14 +2227,14 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
   z-index: 0;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(245,217,216,.12), transparent 60%);
-  opacity: .1;
-  transition: opacity 2.5s ease-in-out;
+  opacity: .06;
+  transition: opacity 3s ease-in-out;
 }
 
-.genesis-overlay[data-phase="1"] .genesis-glow { opacity: .15; }
-.genesis-overlay[data-phase="2"] .genesis-glow { opacity: .3; }
-.genesis-overlay[data-phase="3"] .genesis-glow { opacity: .5; }
-.genesis-overlay[data-phase="4"] .genesis-glow { opacity: .55; }
+.genesis-overlay[data-phase="1"] .genesis-glow { opacity: .08; }
+.genesis-overlay[data-phase="2"] .genesis-glow { opacity: .18; }
+.genesis-overlay[data-phase="3"] .genesis-glow { opacity: .35; }
+.genesis-overlay[data-phase="4"] .genesis-glow { opacity: .45; }
 
 /* ---- Genesis 文案 ---- */
 .genesis-text {
@@ -2234,18 +2243,19 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
   line-height: 1.8;
   color: var(--muted);
   text-align: center;
-  max-width: 300px;
+  max-width: 280px;
   min-height: 54px;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
+  opacity: 0;
 }
 
 .genesis-text.genesis-text-anim {
-  animation: genesis-text-appear 1.2s ease-in-out forwards;
+  animation: genesis-text-appear 1.5s ease-in-out forwards;
 }
 
 @keyframes genesis-text-appear {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* ---- Genesis 进度点 ---- */

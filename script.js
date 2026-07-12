@@ -2247,14 +2247,17 @@
   }
 
   // ====== Bubble Genesis（首次体验引导） ======
-  // 仅首次注册后播放，帮助用户理解 Bubble 的意义。
+  // 3 幕 4 阶段叙事，总约 18 秒。
+  // Act 1 (Why): 身体变化 → 情绪变化
+  // Act 2 (How): 记录留下痕迹 → 形成 Pattern
+  // Act 3 (What): 看见变化，接纳自己
   // 状态记录在 localStorage cb_genesis_seen，播放完成或跳过后永久写入。
 
   var GENESIS_PHASES = [
-    { duration: 5000, text: "有些变化，发生在身体，也发生在情绪里。" },
-    { duration: 5000, text: "每一次记录，都会在这里留下痕迹。" },
-    { duration: 5000, text: "慢慢沉淀，形成属于你的 Pattern。" },
-    { duration: 2000, text: "看见变化，也接纳自己的感受。" }
+    { duration: 5500, text: "身体会变化，所以情绪也会变化。", textDelay: 400 },
+    { duration: 4500, text: "每一次记录，都会在这里留下痕迹。", textDelay: 300 },
+    { duration: 4500, text: "慢慢沉淀，形成属于你的 Pattern。", textDelay: 300 },
+    { duration: 3500, text: "看见变化，也接纳自己的感受。", textDelay: 200 }
   ];
 
   function hasSeenGenesis() {
@@ -2390,33 +2393,55 @@
       var phase = GENESIS_PHASES[idx];
       overlay.setAttribute('data-phase', String(idx + 1));
 
-      // 更新文案（带淡入动画）
-      if (textEl) {
-        textEl.classList.remove('genesis-text-anim');
-        textEl.offsetHeight; // force reflow
-        textEl.textContent = phase.text;
-        textEl.classList.add('genesis-text-anim');
-      }
-
       // 更新进度点
       for (var d = 0; d < dots.length; d++) {
         dots[d].classList.toggle('active', d === idx);
       }
 
-      // 阶段特定视觉效果（文字与 Bubble 成长同步）
+      // 文字延迟出现（呼吸感：先看到 Bubble 变化，再读到文字）
+      var textTimer = setTimeout(function () {
+        if (finished || !textEl) return;
+        textEl.classList.remove('genesis-text-anim');
+        textEl.offsetHeight; // force reflow
+        textEl.textContent = phase.text;
+        textEl.classList.add('genesis-text-anim');
+      }, phase.textDelay || 0);
+      timers.push(textTimer);
+
+      // 微阶段视觉触发（Bubble 6 阶段成长）
       if (idx === 1) {
-        // Phase 2：记录留下痕迹 — 前两个粒子缓慢进入 + 初始纹理
-        spawnParticle(0);
-        setTimeout(function () { spawnParticle(1); }, 1200);
-        addTextureLayers(1);
+        // Phase 2 (Act 2a)：记录留下痕迹
+        // t=2s: 第一个粒子缓慢进入（第一次记录的痕迹）
+        var p1Timer = setTimeout(function () {
+          if (!finished) spawnParticle(0);
+        }, 2000);
+        timers.push(p1Timer);
       } else if (idx === 2) {
-        // Phase 3：Pattern 形成 — 更多粒子 + 连线 + 丰富纹理
-        spawnParticle(2);
+        // Phase 3 (Act 2b)：Pattern 形成
+        // t=1.2s: 更多粒子进入
+        var p2Timer = setTimeout(function () {
+          if (!finished) { spawnParticle(1); spawnParticle(2); }
+        }, 1200);
+        timers.push(p2Timer);
+        // t=2.5s: 连线形成（Pattern 关联）
+        var connTimer = setTimeout(function () {
+          if (!finished) spawnConnections();
+        }, 2500);
+        timers.push(connTimer);
+        // t=1s: 第一层纹理
+        var texTimer = setTimeout(function () {
+          if (!finished) addTextureLayers(1);
+        }, 1000);
+        timers.push(texTimer);
+        // t=3s: 更丰富纹理
+        var tex2Timer = setTimeout(function () {
+          if (!finished) addTextureLayers(3);
+        }, 3000);
+        timers.push(tex2Timer);
+      } else if (idx === 3) {
+        // Phase 4 (Act 3)：最后一个粒子（完整沉淀）
         spawnParticle(3);
-        setTimeout(function () { spawnConnections(); }, 800);
-        addTextureLayers(3);
       }
-      // Phase 4（idx === 3）：沉淀停留，无新视觉元素，让用户感受完成状态
 
       // 调度下一阶段
       var timer = setTimeout(function () {
