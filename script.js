@@ -2205,14 +2205,15 @@
         // 刷新首页数据
         if (typeof loadCycleStatus === 'function') loadCycleStatus();
         // 首次注册：播放 Bubble Genesis 引导动画
-        // 仅注册（非登录）且从未看过 Genesis 时触发
-        if (isRegisterMode && typeof hasSeenGenesis === 'function' && !hasSeenGenesis()) {
-          if (typeof playGenesis === 'function') {
-            playGenesis(function () {
-              var narration = document.getElementById('growthNarration');
-              if (narration) narration.textContent = '你的记录正在慢慢形成属于你的 Pattern。';
-            });
-          }
+        // 触发条件：只要是从"注册"流程进来的用户就一定播放，不再受 cb_genesis_seen 影响
+        // （每个新账号都应该有自己的"首次体验"，老用户的 cb_genesis_seen 不应阻断新用户）
+        if (isRegisterMode && typeof playGenesis === 'function') {
+          // 清掉旧账号留下的 cb_genesis_seen 标记，让当前这个新账号能看到自己的开场动画
+          try { localStorage.removeItem('cb_genesis_seen'); } catch (e) {}
+          playGenesis(function () {
+            var narration = document.getElementById('growthNarration');
+            if (narration) narration.textContent = '你的记录正在慢慢形成属于你的 Pattern。';
+          });
         }
         // 重置表单
         emailEl.value = '';
